@@ -32,24 +32,4 @@ object AppLinks {
     /** GitHub 仓库展示用短地址（去掉协议头，界面文字用；与 [GITHUB_REPO] 必须指向同一仓库） */
     const val GITHUB_REPO_DISPLAY = "github.com/CYQawa/YunX"
 
-    /**
-     * QQ 群资料页 scheme：QQ 已安装时直接拉起群卡片，用户点一下「加入」即可进群。
-     *
-     * ★ 为什么不用 https://qm.qq.com/... ：那种加群链接需要在 QQ 群后台申请一个 key，
-     *   光有群号拼不出来；只有群号时只能走 mqqapi 这种私有 scheme。
-     */
-    fun qqGroupScheme(): String =
-        "mqqapi://card/show_pslcard?src_type=internal&version=1&uin=$QQ_GROUP&card_type=group&source=qrcode"
-
-    /**
-     * 尝试拉起 QQ 群资料页；返回 false 表示这台设备上没有应用能处理该 scheme（基本都是没装 QQ）。
-     *
-     * ★ 刻意不用 resolveActivity() 预检：Android 11+ 的软件包可见性会让它在未声明 <queries> 时
-     *   直接返回 null，把「装了 QQ」误判成「没装」；而隐式 Intent 直接 startActivity 不受该限制。
-     *   所以这里靠捕获 ActivityNotFoundException 判断，返回 false 时调用方退回复制群号。
-     */
-    fun openQQGroup(context: Context): Boolean {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(qqGroupScheme()))
-        return runCatching { context.startActivity(intent) }.isSuccess
-    }
 }
