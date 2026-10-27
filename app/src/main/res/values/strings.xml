@@ -17,7 +17,7 @@
 -->
 
 <resources>
-    <string name="app_name">云析</string>
+    <string name="app_name">FPAN APP</string>
     <!-- 系统「选中文本 → 更多」菜单里显示的条目名（见 AndroidManifest 的 ProcessTextLink）：
          比光秃秃一个「云析」更清楚要干什么 -->
     <string name="process_text_action">用云析解析</string>
