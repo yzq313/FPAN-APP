@@ -569,7 +569,7 @@ FileNameText(text = file.fname, style = MaterialTheme.typography.bodyLarge, font
 **说明正文的装饰过滤（`UpdateChecker.cleanReleaseNotes`）**：`UpdateSheet` 是用**纯文本** `Text()` 显示
 `release.body` 的（没上 markdown/HTML 渲染），而 GitHub Release 正文开头那两样东西只是装饰：
 ① capsule-render 的波浪头图 `<img src="https://capsule-render.vercel.app/api?..." />`；
-② QQ 群徽章 `[![QQ交流群](https://img.shields.io/badge/...&logo=qq&logoColor=white)](http://qm.qq.com/cgi-bin/qm/qr?...&group_code=635207650)`。
+② QQ 群徽章 `[![QQ交流群](https://img.shields.io/badge/...&logo=qq&logoColor=white)](https://example.com/group)`。
 它们在 GitHub 页面上是图片，到我们这儿只会显示成一长串 URL，白占那 220dp 的高度 ⇒ 在 `parseRelease()`
 里清洗一次（**只此一处**：`UpdateSheet` 与 `netdiskDownloadUrl()` 读到的都是清洗后的那份）。
 ★ 用户明确要求「其他不要去掉」，所以规则只认这两类：不认 shields.io 的通用徽章、不认别的图床 `<img>`；
@@ -589,36 +589,9 @@ FileNameText(text = file.fname, style = MaterialTheme.typography.bodyLarge, font
 
 ---
 
-### 3.24 对外联系方式（QQ 群 / GitHub 仓库）：常量集中在 `AppLinks`
+### 3.24 对外联系方式
 
-QQ 群号与仓库地址**只允许**写在 `app/src/main/kotlin/com/yunx/app/util/AppLinks.kt`，界面里引用常量：
-
-| 常量 | 值 | 用在哪 |
-| --- | --- | --- |
-| `AppLinks.QQ_GROUP` | `635207650` | 引导页首页胶囊、设置页「关于」组 |
-| `AppLinks.GITHUB_REPO` | `https://github.com/CYQawa/YunX` | 引导页 / 关于页卡片跳转、设置页「关于」组 |
-| `AppLinks.GITHUB_REPO_DISPLAY` | `github.com/CYQawa/YunX` | 界面文字展示（不带协议头） |
-
-- 入口清单：`app/src/main/kotlin/com/yunx/app/ui/screens/OnboardingScreen.kt` 的 `QQGroupPill`（欢迎页 GitHub 卡片下方，点击拉起 QQ 群卡片）；
-  `app/src/main/kotlin/com/yunx/app/ui/screens/SettingsScreen.kt` 的「关于」组最后两项 —— 「QQ 交流群」（点击拉起 QQ 群卡片，长按复制群号）、
-  「GitHub 仓库」（系统浏览器打开，没有可用浏览器时退化为复制链接）。同组分段圆角随之变为
-  `FIRST`（关于云析）→ `MIDDLE`（支持开发）→ `MIDDLE`（QQ 交流群）→ `LAST`（GitHub 仓库）。
-- **QQ 入口 = 先跳 QQ、失败再复制**（需求：能直接进群就别让人手动复制）：
-  `AppLinks.qqGroupScheme()` 拼 `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=<群号>&card_type=group&source=qrcode`，
-  `AppLinks.openQQGroup(context)` 负责 `startActivity` 并返回是否成功；返回 false 时调用方 `copyToClipboard(群号)` + 提示「未安装 QQ，群号已复制」。
-  - **为什么光有群号只能走 mqqapi**：`https://qm.qq.com/cgi-bin/qm/qr?k=...` 那种加群链接需要在 QQ 群后台申请 key，群号拼不出来。
-  - **为什么不用 `resolveActivity()` 预检**：Android 11+ 的软件包可见性会在未声明 `<queries>` 时让它返回 null，把「装了 QQ」误判成「没装」；
-    隐式 Intent 直接 `startActivity` 不受该限制，所以靠捕获 `ActivityNotFoundException` 判断（`runCatching`），也就不必往 AndroidManifest 加 `<queries>`。
-- **两处反馈方式不同不是笔误**：引导页是 `MainScreen` early-return 的全屏页、不在 `Scaffold` 里，`SnackbarController`
-  的气泡挂不到它上面 ⇒ 引导页用系统 `Toast`（Android 13+ 复制剪贴板时系统还会自己弹提示）；设置页在 `Scaffold` 内 ⇒ 用 `SnackbarController`。
-- 写剪贴板**不受**「自动识别剪贴板」开关约束（§3.22 管的是读取）。
-- 引导页欢迎页的 `Column` 带 `verticalScroll`：小屏（≈640dp 高）上「图标 + 标题 + 标签 + GitHub 卡片 + QQ 胶囊」会超出一屏；
-  `fillMaxSize()` 会把它带成 `minHeight` 约束，所以内容不足一屏时 `Arrangement.Center` 仍然居中，超出时才滚动。
-- 换群号 / 换仓库地址时**只改 `AppLinks`**（`AboutScreen` 的 GitHub 卡片也已改为引用常量），别再往界面里写死。
-- **回退**：删掉引导页 `QQGroupPill` 与设置页两项即可；只想退回「点击复制」行为的话，把两处 `onClick` 换回
-  `copyToClipboard(...)`、删掉 `openQQGroup`/`qqGroupScheme` 即可（`AppLinks` 常量本身没有副作用）。
-
----
+应用不提供 QQ 群入口。仓库地址集中维护在 `AppLinks`。
 
 ### 3.25 115 网盘接入（Cookie 网页登录 / 分享解析 / 转存 / 创建分享）
 

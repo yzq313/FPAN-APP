@@ -17,7 +17,6 @@
 
 [下载最新版](https://github.com/CYQawa/YunX/releases/latest) · [功能](#功能) · [使用](#使用) · [构建](#构建) · [常见问题](#常见问题)
 
-[![QQ交流群](https://img.shields.io/badge/QQ%E7%BE%A4-635207650-12B7F5?style=flat-square\&logo=qq\&logoColor=white)](http://qm.qq.com/cgi-bin/qm/qr?...\&group_code=635207650)
 
 </div>
 

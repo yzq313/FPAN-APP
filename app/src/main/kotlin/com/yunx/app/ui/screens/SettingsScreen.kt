@@ -776,25 +776,6 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(ListGroupGap))
         SettingsItem(
-            icon = Icons.Outlined.Groups,
-            shape = listGroupShape(ListGroupPos.MIDDLE),
-            title = "QQ 交流群",
-            description = "群号 ${AppLinks.QQ_GROUP}（点击加入群聊，长按复制群号）",
-            // 优先拉起 QQ 群卡片；设备上没装 QQ 时退回复制群号，保证入口永远可用
-            onClick = {
-                if (!AppLinks.openQQGroup(context)) {
-                    copyToClipboard(context, AppLinks.QQ_GROUP)
-                    SnackbarController.show("未安装 QQ，群号已复制：${AppLinks.QQ_GROUP}")
-                }
-            },
-            onLongClick = {
-                copyToClipboard(context, AppLinks.QQ_GROUP)
-                SnackbarController.show("群号已复制：${AppLinks.QQ_GROUP}")
-            }
-        )
-
-        Spacer(modifier = Modifier.height(ListGroupGap))
-        SettingsItem(
             icon = Icons.Outlined.Code,
             shape = listGroupShape(ListGroupPos.LAST),
             title = "GitHub 仓库",
