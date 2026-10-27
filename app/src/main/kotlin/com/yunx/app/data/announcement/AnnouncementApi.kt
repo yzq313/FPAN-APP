@@ -25,44 +25,10 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.URLEncoder
 
-/**
- * 应用内公告客户端（远程公告系统 v1.0.0）。
- *
- * 只用到两个**公开**接口（管理端 `/api/v1/admin/` 系列接口需要 ADMIN_TOKEN，客户端一律不碰）：
- * - `GET /api/v1/announcements?page=&pageSize=`：列表，**不含正文**；
- * - `GET /api/v1/announcements/{id}`：详情，含正文，且会让 `viewCount` +1（属于预期行为）。
- *
- * 三条硬约定（接口文档 §1.1 / §4 / §6）：
- * 1. 成功与否看响应体的 `success` 字段，**不要只看 HTTP 状态码**（业务失败与 HTTP 错误码是分离的）；
- * 2. 列表接口有副作用：每次成功调用都计入服务端当日「客户端启动数」，所以**不要轮询** ——
- *    只在启动检查与用户手动刷新/翻页时调用；
- * 3. 详情会让浏览量 +1，因此详情结果在 ViewModel 里按 id 缓存，避免重组 / 返回时重复请求。
- *
- * `content` 支持 Markdown / HTML（渲染交给 mikepenz 的 GFM 渲染器，与 README 预览同一套，
- * 不注入 WebView ⇒ 不存在脚本执行面）。
- */
+/** 从公开 GitHub 仓库的 JSON 文件读取公告。 */
 object AnnouncementApi {
-
-    /**
-     * 公告服务地址（PHP + SQLite 虚拟主机版；接口契约与原 Cloudflare Workers 版完全一致，只有域名与协议变了）。
-     *
-     * ★ 当前部署是 **HTTP 明文**，而本项目的 `network_security_config.xml` 全局禁止明文 ⇒
-     *   那里为这个域名单独开了一条 cleartext 例外，**两处必须一起改**：
-     *   后端上 HTTPS 时把这里改回 `https://…` 并删掉那条 `<domain-config>`，
-     *   否则要么请求被系统直接拦掉（`CLEARTEXT communication to … not permitted`），要么白白留个明文口子。
-     *
-     * 图床域名与 API 域名无关：图片直链由服务端给出、客户端直接加载，http 图床同样要在
-     * network_security_config 里放行（见那里的注释），https 图床不受影响。
-     */
-    const val BASE_URL = "http://yunx.cyqawa.os.kg"
-
-    /**
-     * 列表分页大小 = 接口上限 100。
-     * 启动时一次取满，于是「未读角标」「启动弹窗候选」的口径就是**全部公告**，而不是前 20 条；
-     * 只有公告总数超过 100 条时列表页才需要「加载更多」翻第二页（仍用同一个 pageSize，分页口径一致）。
-     */
+    const val BASE_URL = "https://raw.githubusercontent.com/yzq313/FPAN-APP/master/announcements.json"
     const val PAGE_SIZE = 100
 
     /** 公告相关日志统一走这个标签，失败原因一律 E 级打印，方便直接看 logcat 定位 */
@@ -113,74 +79,50 @@ object AnnouncementApi {
         data class Failure(val message: String) : Result<Nothing>
     }
 
-    /** 获取公告列表（不含正文）；[page] 从 1 开始 */
+    /** 读取静态文件并在客户端分页；未到发布时间的公告不会显示。 */
     suspend fun fetchPage(page: Int = 1, pageSize: Int = PAGE_SIZE): Result<Page> =
-        request("/api/v1/announcements?page=$page&pageSize=$pageSize") { data ->
-            Page(
-                total = data.optInt("total"),
-                page = data.optInt("page", page),
-                pageSize = data.optInt("pageSize", pageSize),
-                totalPages = data.optInt("totalPages"),
-                hasMore = data.optBoolean("hasMore"),
-                list = data.optJSONArray("list")?.let { parseAnnouncementArray(it) } ?: emptyList()
-            )
-        }
-
-    /**
-     * 获取公告详情（含正文）。
-     * 公告不存在 / 草稿 / 已下架 / 定时未到统一是 `404` + `code 40401`，服务端 message 可直接展示。
-     */
-    suspend fun fetchDetail(id: String): Result<Announcement> =
-        request("/api/v1/announcements/${encodeId(id)}") { data -> parseAnnouncement(data) }
-
-    /** 发 GET 请求并解析统一响应结构；所有失败路径都返回 [Result.Failure]（不抛异常） */
-    private suspend fun <T> request(path: String, fromData: (JSONObject) -> T): Result<T> =
-        withContext(Dispatchers.IO) {
-            val url = BASE_URL + path
-            val body = try {
-                val call = Request.Builder()
-                    .url(url)
-                    .header("Accept", "application/json")
-                    .header("User-Agent", "YunX")
-                    .get()
-                    .build()
-                HttpClients.apiClient().newCall(call).execute().use { resp ->
-                    val text = resp.body?.string().orEmpty()
-                    if (text.isBlank()) {
-                        // 服务端异常时可能连 JSON 都没有：这里只留 HTTP 码，够定位
-                        Log.e(TAG, "公告响应为空（HTTP ${resp.code}，$url）")
-                        return@withContext Result.Failure("响应为空（HTTP ${resp.code}）")
-                    }
-                    // ★ 非 2xx 也可能带合法 JSON（业务失败），所以先取 body 再交给 parseEnvelope 判 success
-                    text
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "公告请求异常（$url）：${e.javaClass.simpleName}: ${e.message}", e)
-                return@withContext Result.Failure("${e.javaClass.simpleName}: ${e.message ?: "网络异常"}")
+        when (val result = fetchAnnouncements()) {
+            is Result.Failure -> result
+            is Result.Success -> {
+                val safePage = page.coerceAtLeast(1)
+                val safeSize = pageSize.coerceIn(1, PAGE_SIZE)
+                val all = result.data
+                val start = ((safePage.toLong() - 1) * safeSize).coerceAtMost(all.size.toLong()).toInt()
+                val end = (start + safeSize).coerceAtMost(all.size)
+                Result.Success(Page(all.size, safePage, safeSize,
+                    (all.size + safeSize - 1) / safeSize, end < all.size, all.subList(start, end)))
             }
-            parseEnvelope(body, url, fromData)
         }
 
-    /** 解析统一响应结构：`success` 为 false 时把服务端 message 原样带回（接口文档 §1.2） */
-    private fun <T> parseEnvelope(body: String, url: String, fromData: (JSONObject) -> T): Result<T> {
-        val json = try {
-            JSONObject(body)
-        } catch (e: Exception) {
-            Log.e(TAG, "公告响应不是合法 JSON（前 200 字=${body.take(200)}）", e)
-            return Result.Failure("响应格式异常")
+    /** 静态公告没有浏览量统计。 */
+    suspend fun fetchDetail(id: String): Result<Announcement> =
+        when (val result = fetchAnnouncements()) {
+            is Result.Failure -> result
+            is Result.Success -> result.data.firstOrNull { it.id == id.trim() }
+                ?.let { Result.Success(it) } ?: Result.Failure("公告不存在或尚未发布")
         }
-        if (!json.optBoolean("success")) {
-            val code = json.optInt("code")
-            val message = json.stringOrNull("message") ?: "请求失败"
-            Log.e(TAG, "公告接口业务失败：[$code] $message（$url）")
-            return Result.Failure(message)
-        }
-        val data = json.optJSONObject("data") ?: return Result.Failure("响应数据为空")
-        return try {
-            Result.Success(fromData(data))
+
+    private suspend fun fetchAnnouncements(): Result<List<Announcement>> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url(BASE_URL)
+                .header("Accept", "application/json")
+                .header("Cache-Control", "no-cache")
+                .header("User-Agent", "FPAN-APP").get().build()
+            HttpClients.apiClient().newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.Failure("HTTP ${response.code}")
+                val body = response.body?.string().orEmpty()
+                val array = JSONObject(body).getJSONArray("announcements")
+                val now = System.currentTimeMillis()
+                val items = parseAnnouncementArray(array)
+                    .distinctBy { it.id }
+                    .filter { it.publishAt == null || (parseIsoMillis(it.publishAt)?.let { time -> time <= now } == true) }
+                    .sortedWith(compareByDescending<Announcement> { it.isPinned }
+                        .thenByDescending { it.sortOrder }.thenByDescending { it.effectiveMillis })
+                Result.Success(items)
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "公告数据解析失败（$url）：${e.message}", e)
-            Result.Failure("数据解析失败")
+            Log.e(TAG, "公告加载失败", e)
+            Result.Failure("公告加载失败：${e.message ?: "网络或数据异常"}")
         }
     }
 
@@ -234,8 +176,7 @@ object AnnouncementApi {
         updatedAt = json.stringOrNull("updatedAt").orEmpty()
     )
 
-    /** 公告 ID 长度 <= 128 且允许客户端自定义，进路径前统一编码（正常 ann_xxx 编码后原样） */
-    private fun encodeId(id: String): String = URLEncoder.encode(id.trim(), "UTF-8")
+
 }
 
 /**

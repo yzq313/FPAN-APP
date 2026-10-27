@@ -87,7 +87,7 @@ class AnnouncementViewModel(private val readStore: AnnouncementReadStore) : View
         state.items.count { it.id.isNotEmpty() && it.id !in read }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    /** 详情缓存：详情接口会让 viewCount +1，同一条公告在一次会话里只请求一次 */
+    /** 详情缓存：静态文件详情按 id 缓存，避免在同一会话重复请求 */
     private val detailCache = mutableMapOf<String, AnnouncementApi.Announcement>()
 
     private var startupChecked = false
@@ -128,7 +128,7 @@ class AnnouncementViewModel(private val readStore: AnnouncementReadStore) : View
 
     /**
      * 手动刷新 / 下拉刷新：重新拉第一页并覆盖列表。
-     * ★ 详情缓存也一起作废：详情是按 id 缓存的（详情接口会让 viewCount +1，所以刻意不重复请求），
+     * ★ 详情缓存也一起作废：详情是按 id 缓存的（避免同一会话内重复读取），
      *   只刷列表的话「服务端改了正文 → 刷新列表 → 再进详情」看到的还是旧内容。
      *   正在看的那条顺带重拉（列表刷新时它一般不可见，返回详情页时就已经是新数据）。
      */
@@ -145,7 +145,7 @@ class AnnouncementViewModel(private val readStore: AnnouncementReadStore) : View
      *   这里保留旧内容，拿到新数据再整体替换；失败只弹 Snackbar，不把已有内容换成错误页
      *   （用户主动刷新失败时，旧内容仍然是有用的）。
      *
-     * 注意：详情接口会让 viewCount +1，所以主动刷新的代价是浏览量再 +1 —— 这是预期行为。
+     * 静态文件不提供浏览量统计。
      */
     fun reloadCurrentDetail() {
         val id = (_detail.value as? DetailUiState.Loaded)?.item?.id ?: return
@@ -249,7 +249,7 @@ class AnnouncementViewModel(private val readStore: AnnouncementReadStore) : View
     }
 
     /**
-     * 用详情返回的数据回填列表项：详情里的浏览量是 +1 之后的真实值，回填后返回列表时数字是新的。
+     * 用详情返回的数据回填列表项：详情更新后回填列表。
      * （列表里没有这条时什么都不做 —— 比如从启动弹窗直接进详情时列表可能还没加载。）
      */
     private fun backfillListItem(id: String, item: AnnouncementApi.Announcement) {

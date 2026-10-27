@@ -93,7 +93,7 @@ import com.yunx.app.ui.viewmodel.AnnouncementViewModel
  * ★ 封面不再单独压在正文上面：它和图集里的正文图片合成同一条横向列表，封面排第一并打「封面」标签
  *   （见 [announcementGallery]），列表项点开是全屏看图（共享元素在 AnnouncementScreen 里注册）。
  *
- * 详情接口会让 viewCount +1，所以 ViewModel 里按 id 缓存，本页重组 / 返回再进都不会重复请求；
+ * 静态公告详情由 ViewModel 按 id 缓存，避免重复读取；
  * 右上角刷新（[onRefresh]）与列表页刷新都会让那份缓存作废重拉，见 `AnnouncementViewModel.reloadCurrentDetail`。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -105,7 +105,7 @@ fun AnnouncementDetailPage(
     openImageIndex: Int,
     onBack: () -> Unit,
     onRetry: () -> Unit,
-    /** 右上角刷新：强制重拉这一条（会让 viewCount +1，但用户点刷新就是要最新数据） */
+    /** 右上角刷新：强制重拉当前公告 */
     onRefresh: () -> Unit,
     /** 点第几张图（下标对 [announcementGallery] 的顺序而言）→ 宿主打开全屏看图 */
     onImageClick: (Int) -> Unit,
