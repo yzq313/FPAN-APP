@@ -114,26 +114,13 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
-/**
- * 首次启动引导页（三页式）：
- * - 第 1 页：简洁欢迎 —— 图标 / 名称 / 版本 / 一句话 / 开源仓库入口；
- * - 第 2 页：用户协议 + 免责声明 + 开源协议（长文，页内可滚动）；
- * - 第 3 页：权限准备 —— 通知 / 后台运行 / 存储一次过一遍（见 [PermissionPage]）；
- *   其中通知与后台运行可跳过，**存储权限在 Android 9 及以下是必要权限**（没有它保存必失败），
- *   未授权时底部「开始使用」按钮置灰禁用，不给跳过（文案与图标不变，授权入口在权限页的存储卡片上）；
- * - 底部导航：圆点指示器 + 「上一步 / 下一步 / 开始使用」，页面切换用 pager 自身滑动 + 按钮区淡入淡出；
- * - 背景：Animated Blob（流体渐变）—— 自绘实现，不引第三方库。
- */
+/** 首次启动显示协议；Android 9 及以下需先授予存储权限。 */
 @Composable
 fun OnboardingScreen(
     onFinish: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val pagerState = rememberPagerState(pageCount = { 3 })
-    val scope = rememberCoroutineScope()
-    // 只在换页时变化的粗粒度读取：按钮文案/指示器需要它
-    val page = pagerState.currentPage
 
     // ★ 存储权限：Android 9 及以下是「必要权限」—— 没它下载能跑完，但保存一定失败
     //   （DownloadManager 保存前直接抛「未授予存储权限，无法保存到下载目录」）。
@@ -185,45 +172,21 @@ fun OnboardingScreen(
                     .fillMaxSize()
                     .safeDrawingPadding()
             ) {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) { index ->
-                    // 页面内部的过渡：随滑动比例做轻微位移 + 淡出。
-                    // ★ currentPageOffsetFraction 只在 graphicsLayer 块里读 —— 逐帧只失效图层，不重组页面内容。
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                val offset = (pagerState.currentPage - index) + pagerState.currentPageOffsetFraction
-                                translationX = offset * size.width * 0.22f
-                                alpha = (1f - abs(offset)).coerceIn(0f, 1f)
-                            }
-                    ) {
-                        when (index) {
-                            0 -> WelcomePage(context)
-                            1 -> TermsPage()
-                            else -> PermissionPage(
-                                storageGranted = storageGranted,
-                                storageDenied = storageDenied,
-                                onRequestStorage = requestStorage
-                            )
-                        }
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    TermsPage(
+                        storageBlocking = storageBlocking,
+                        storageDenied = storageDenied,
+                        onRequestStorage = requestStorage
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(onClick = onFinish, enabled = !storageBlocking) {
+                        Text("开始使用")
                     }
                 }
-
-                OnboardingBottomBar(
-                    page = page,
-                    pageCount = pagerState.pageCount,
-                    // 存储权限没给（仅 Android 9-）：主按钮置灰禁用 —— 文案恒为「开始使用」，
-                    // 授权入口在页面里的「存储权限」卡片；授权成功后按钮自动恢复可点
-                    finishEnabled = !storageBlocking,
-                    onPrev = { scope.launch { pagerState.animateScrollToPage(page - 1) } },
-                    onNext = { scope.launch { pagerState.animateScrollToPage(page + 1) } },
-                    onFinish = onFinish
-                )
             }
         }
     }
@@ -443,7 +406,7 @@ private fun GitHubCard(context: Context) {
 // ==================== 第 2 页：协议与声明 ====================
 
 @Composable
-private fun TermsPage() {
+private fun TermsPage(storageBlocking: Boolean, storageDenied: Boolean, onRequestStorage: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -459,7 +422,7 @@ private fun TermsPage() {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "云析是开源工具，以下是使用条款与免责说明",
+            text = "FPAN APP 是开源工具，以下是使用条款与免责说明",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -495,6 +458,17 @@ private fun TermsPage() {
             )
         )
 
+        if (storageBlocking) {
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(
+                text = "Android 9 及以下需要存储权限才能保存下载文件。",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(onClick = onRequestStorage) {
+                Text(if (storageDenied) "前往设置授权" else "授予存储权限")
+            }
+        }
         Spacer(modifier = Modifier.height(18.dp))
         Text(
             text = "点击下方「开始使用」即表示你已阅读并同意以上条款",
