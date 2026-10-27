@@ -1,6 +1,7 @@
 name: Android CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "master" ]
     # paths 过滤：仅当构建相关文件变化时才触发，避免空跑 CI（workflow 自身必须在列表内，否则改它不触发）
