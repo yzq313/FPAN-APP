@@ -431,7 +431,15 @@ fun DriveScreen(
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
-                item(key = quark.id) {
+                // 只对网盘分组；GitHub 和视频账号保留原来的位置和行为。
+                val drives = listOf(quark, uc, xunlei, baidu, c139, pan123, pan115, guangya, ilanzou, lanzou)
+                val hasLoggedIn = drives.any { it.isLoggedIn }
+                for (loggedIn in listOf(true, false)) {
+                    if (drives.none { it.isLoggedIn == loggedIn }) continue
+                    item(key = if (loggedIn) "header_logged_in" else "header_other_drives") {
+                        AccountSectionLabel(if (loggedIn) "已登录" else if (hasLoggedIn) "未登录" else "全部网盘")
+                    }
+                if (quark.isLoggedIn == loggedIn) item(key = quark.id) {
                     DriveAccountCard(
                         account = quark,
                         quota = driveQuotaViewModel.quarkQuota.collectAsState().value,
@@ -447,7 +455,7 @@ fun DriveScreen(
                         }
                     )
                 }
-                item(key = uc.id) {
+                if (uc.isLoggedIn == loggedIn) item(key = uc.id) {
                     DriveAccountCard(
                         account = uc,
                         quota = driveQuotaViewModel.ucQuota.collectAsState().value,
@@ -463,7 +471,7 @@ fun DriveScreen(
                         }
                     )
                 }
-                item(key = xunlei.id) {
+                if (xunlei.isLoggedIn == loggedIn) item(key = xunlei.id) {
                     DriveAccountCard(
                         account = xunlei,
                         quota = driveQuotaViewModel.xunleiQuota.collectAsState().value,
@@ -479,7 +487,7 @@ fun DriveScreen(
                         }
                     )
                 }
-                item(key = baidu.id) {
+                if (baidu.isLoggedIn == loggedIn) item(key = baidu.id) {
                     DriveAccountCard(
                         account = baidu,
                         quota = driveQuotaViewModel.baiduQuota.collectAsState().value,
@@ -495,7 +503,7 @@ fun DriveScreen(
                         }
                     )
                 }
-                item(key = c139.id) {
+                if (c139.isLoggedIn == loggedIn) item(key = c139.id) {
                     DriveAccountCard(
                         account = c139,
                         quota = driveQuotaViewModel.c139Quota.collectAsState().value,
@@ -511,7 +519,7 @@ fun DriveScreen(
                         }
                     )
                 }
-                item(key = pan123.id) {
+                if (pan123.isLoggedIn == loggedIn) item(key = pan123.id) {
                     DriveAccountCard(
                         account = pan123,
                         quota = driveQuotaViewModel.pan123Quota.collectAsState().value,
@@ -527,7 +535,7 @@ fun DriveScreen(
                         }
                     )
                 }
-                item(key = pan115.id) {
+                if (pan115.isLoggedIn == loggedIn) item(key = pan115.id) {
                     DriveAccountCard(
                         account = pan115,
                         quota = driveQuotaViewModel.pan115Quota.collectAsState().value,
@@ -543,7 +551,7 @@ fun DriveScreen(
                         }
                     )
                 }
-                item(key = guangya.id) {
+                if (guangya.isLoggedIn == loggedIn) item(key = guangya.id) {
                     DriveAccountCard(
                         account = guangya,
                         quota = driveQuotaViewModel.guangyaQuota.collectAsState().value,
@@ -559,7 +567,7 @@ fun DriveScreen(
                         }
                     )
                 }
-                item(key = ilanzou.id) {
+                if (ilanzou.isLoggedIn == loggedIn) item(key = ilanzou.id) {
                     DriveAccountCard(
                         account = ilanzou,
                         quota = driveQuotaViewModel.ilanzouQuota.collectAsState().value,
@@ -575,7 +583,7 @@ fun DriveScreen(
                         }
                     )
                 }
-                item(key = lanzou.id) {
+                if (lanzou.isLoggedIn == loggedIn) item(key = lanzou.id) {
                     DriveAccountCard(
                         account = lanzou,
                         onClick = if (lanzou.isLoggedIn) {
@@ -589,6 +597,7 @@ fun DriveScreen(
                             null
                         }
                     )
+                }
                 }
                 item(key = github.id) {
                     // GitHub：已配置 Token 点击主体进入「我的主页」；未配置打开 Token 弹窗；更多按钮在登录后显示
