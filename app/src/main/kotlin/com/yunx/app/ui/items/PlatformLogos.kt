@@ -63,3 +63,5 @@ fun SharePlatform.logoRes(): Int = when (this) {
 }
 
 @DrawableRes
+fun drivePlatformLogoRes(platformId: String): Int? =
+    SharePlatform.entries.firstOrNull { it.name.equals(platformId, ignoreCase = true) }?.logoRes()
