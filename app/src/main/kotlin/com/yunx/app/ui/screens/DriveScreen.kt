@@ -715,6 +715,16 @@ fun DriveScreen(
 }
 
 @Composable
+private fun AccountSectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
 private fun DriveAccountCard(
     account: DriveAccount,
     /** 网盘空间详情（已登录且有数据时在卡片内显示进度条）；null 不显示 */
