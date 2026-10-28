@@ -1,0 +1,54 @@
+name: Build and publish APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag, for example v1.2.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      YUNX_USE_MIRROR: 'false'
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Validate tag
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9][a-zA-Z0-9._-]*$ ]]; then
+            echo 'Invalid version tag' >&2
+            exit 1
+          fi
+      - name: Checkout tagged source
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build and test debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug testDebugUnitTest --no-daemon
+      - name: Publish debug APK
+        run: |
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            if [[ "$RELEASE_TAG" == *-* ]]; then
+              gh release create "$RELEASE_TAG" --verify-tag --prerelease --title "FPAN APP $RELEASE_TAG" --notes 'Debug test APK. Not signed with a production release certificate. Back up data before uninstalling an incompatible version.'
+            else
+              gh release create "$RELEASE_TAG" --verify-tag --title "FPAN APP $RELEASE_TAG" --notes 'Debug test APK. Not signed with a production release certificate. Back up data before uninstalling an incompatible version.'
+            fi
+          fi
+          gh release upload "$RELEASE_TAG" "$apk"
