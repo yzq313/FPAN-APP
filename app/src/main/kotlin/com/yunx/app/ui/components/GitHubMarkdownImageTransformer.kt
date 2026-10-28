@@ -36,16 +36,8 @@ import com.mikepenz.markdown.model.ImageTransformer
  * [RemoteImageLoader] 里，与普通网络图片（公告封面、头像）共用同一份实现，
  * 这样同一张图在 Markdown 正文与普通 Image 之间不会各存一份 Bitmap。
  *
- * 相对链接已在 ResolveScreen.preprocessReadme 补全为 raw.githubusercontent.com 绝对 URL。
  */
 object GitHubMarkdownImageTransformer : ImageTransformer {
-
-    /** 镜像前缀（由调用方在 ResolveScreen 读取设置后设置；null 表示直连）。转发给共享加载器 */
-    var mirrorPrefix: String?
-        get() = RemoteImageLoader.mirrorPrefix
-        set(value) {
-            RemoteImageLoader.mirrorPrefix = value
-        }
 
     @Composable
     override fun transform(link: String): ImageData? {

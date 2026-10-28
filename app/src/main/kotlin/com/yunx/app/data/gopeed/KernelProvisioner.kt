@@ -167,10 +167,7 @@ object KernelProvisioner {
         PAN,
 
         /** GitHub 直链 */
-        GITHUB,
-
-        /** GitHub 镜像站（失败自动回退直链） */
-        GITHUB_MIRROR
+        GITHUB
     }
 
     /** 一次下载的执行计划：直链 + 请求头 + 回退地址 + 转存临时目录（用完要清） */
@@ -312,15 +309,6 @@ object KernelProvisioner {
                         label = "GitHub 直链",
                         digest = release.digest
                     )
-                    Source.GITHUB_MIRROR -> Plan(
-                        url = mirrorUrl(appContext, release.directUrl),
-                        size = release.assetSize,
-                        headers = emptyMap(),
-                        label = "GitHub 镜像站",
-                        // 镜像站失效/超时时回退直连：与「网盘更新」的 APK 下载同一口径
-                        fallbackUrl = release.directUrl,
-                        digest = release.digest
-                    )
                 }
 
                 val dir = GopeedEngine.kernelTempDir(appContext)
@@ -391,16 +379,6 @@ object KernelProvisioner {
         running.cancel()
         job = null
         _phase.value = Phase.Idle
-    }
-
-    /** 镜像站前缀：与「检查更新」共用同一个设置（未配置则用内置默认） */
-    private fun mirrorUrl(context: Context, url: String): String {
-        val prefix = SettingsRepository(context).githubMirrorPrefix
-        return if (prefix.isNullOrBlank()) {
-            UpdateChecker.mirrorUrl(url)
-        } else {
-            UpdateChecker.mirrorUrl(url, prefix)
-        }
     }
 
     // ---------- 网盘通道 ----------

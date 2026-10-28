@@ -193,7 +193,6 @@ fun DownloadEngineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     /** 非 null = 云端下载的底部弹窗正在显示（已拿到 Release 且已按本机 ABI 挑好包） */
     var cloudRelease by remember { mutableStateOf<KernelProvisioner.KernelRelease?>(null) }
     /** 「GitHub 下载」的二级菜单：直链 / 镜像站 */
-    var showGithubDialog by remember { mutableStateOf(false) }
 
     fun refreshSoInfo() {
         val so = GopeedEngine.soFile(context)
@@ -289,7 +288,6 @@ fun DownloadEngineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     fun startKernelDownload(source: KernelProvisioner.Source) {
         val release = cloudRelease ?: return
         cloudRelease = null
-        showGithubDialog = false
         KernelProvisioner.start(context, release, source)
     }
 
@@ -656,17 +654,8 @@ fun DownloadEngineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         KernelCloudSheet(
             release = release,
             onPan = { startKernelDownload(KernelProvisioner.Source.PAN) },
-            onGithub = { showGithubDialog = true },
+            onGithub = { startKernelDownload(KernelProvisioner.Source.GITHUB) },
             onDismiss = { cloudRelease = null }
-        )
-    }
-
-    // ② GitHub 二级菜单：直链 / 镜像站（镜像站失败会自动回退直链）
-    if (showGithubDialog) {
-        KernelGithubDialog(
-            onDirect = { startKernelDownload(KernelProvisioner.Source.GITHUB) },
-            onMirror = { startKernelDownload(KernelProvisioner.Source.GITHUB_MIRROR) },
-            onDismiss = { showGithubDialog = false }
         )
     }
 
@@ -861,47 +850,6 @@ private fun KernelCloudSheet(
             }
         }
     }
-}
-
-/** GitHub 通道的二级菜单：直链 / 镜像站（镜像站失效时下载器会自动回退直连） */
-@Composable
-private fun KernelGithubDialog(
-    onDirect: () -> Unit,
-    onMirror: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("GitHub 下载") },
-        text = {
-            Column {
-                Button(onClick = onDirect, modifier = Modifier.fillMaxWidth()) {
-                    Icon(
-                        imageVector = Icons.Outlined.Download,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("GitHub 直链下载")
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onMirror, modifier = Modifier.fillMaxWidth()) {
-                    Icon(
-                        imageVector = Icons.Outlined.Cloud,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("GitHub 镜像站下载")
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    )
 }
 
 /**

@@ -110,7 +110,7 @@ class MainActivity : ComponentActivity() {
      *
      * 磁力与普通链接分开：磁力只有 Gopeed 引擎能下，不能走分享解析，直接预填下载页；
      * 其余（分享链接 / 中文口令 / 一整句带链接的文案）统一交给解析页，
-     * 由 `ResolveViewModel.startVideoResolve` → `startResolve` 自己识别。
+     * 由 `ResolveViewModel.startResolve` 识别网盘链接。
      */
     private fun handleDeepLink(intent: Intent?) {
         val text = DeepLinks.textFrom(

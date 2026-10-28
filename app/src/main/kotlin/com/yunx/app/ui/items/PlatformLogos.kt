@@ -21,7 +21,6 @@ package com.yunx.app.ui.items
 import androidx.annotation.DrawableRes
 import com.yunx.app.R
 import com.yunx.app.data.network.SharePlatform
-import com.yunx.app.data.network.video.VideoPlatform
 
 /**
  * 平台 Logo 表：网盘与视频平台 → drawable 资源。
@@ -64,22 +63,3 @@ fun SharePlatform.logoRes(): Int = when (this) {
 }
 
 @DrawableRes
-fun VideoPlatform.logoRes(): Int = when (this) {
-    VideoPlatform.DOUYIN -> R.drawable.logo_douyin
-    VideoPlatform.XHS -> R.drawable.logo_xhs
-    VideoPlatform.KUAISHOU -> R.drawable.logo_kuaishou
-    VideoPlatform.WEIBO -> R.drawable.logo_weibo
-    VideoPlatform.ACFUN -> R.drawable.logo_acfun
-    VideoPlatform.BILIBILI -> R.drawable.logo_bilibili
-    VideoPlatform.PIXIV -> R.drawable.logo_pixiv
-}
-
-/**
- * 按平台标识查网盘 logo（标识就是 [SharePlatform.name] 的小写形式，如 `quark` / `pan115`）。
- *
- * 网盘账号卡片（`DriveScreen.DriveAccount`）里存的是字符串标识而不是枚举，这里替它转一次；
- * 查不到返回 null，调用方退回文字首字 —— 新加平台时就算忘了配图也只是显示得朴素，不会空一块。
- */
-@DrawableRes
-fun drivePlatformLogoRes(platformId: String): Int? =
-    SharePlatform.entries.firstOrNull { it.name.equals(platformId, ignoreCase = true) }?.logoRes()

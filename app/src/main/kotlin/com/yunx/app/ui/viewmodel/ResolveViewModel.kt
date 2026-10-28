@@ -36,13 +36,6 @@ import com.yunx.app.data.network.C139Constants
 import com.yunx.app.data.network.GuangYaConstants
 import com.yunx.app.data.network.ILanzouConstants
 import com.yunx.app.data.network.LanzouConstants
-import com.yunx.app.data.network.GitHubApi
-import com.yunx.app.data.network.GitHubCommitDateCache
-import com.yunx.app.data.network.GitHubResponseCache
-import com.yunx.app.data.network.GitHubLinkParser
-import com.yunx.app.data.network.GitHubLinkType
-import com.yunx.app.data.network.GitHubRepo
-import com.yunx.app.data.network.GitHubRelease
 import com.yunx.app.data.network.Pan115Constants
 import com.yunx.app.data.network.Pan123Constants
 import com.yunx.app.data.network.QuarkConstants
@@ -56,12 +49,6 @@ import com.yunx.app.data.network.XunleiKouling
 import com.yunx.app.data.network.model.DownloadLink
 import com.yunx.app.data.network.model.ShareFile
 import com.yunx.app.data.network.model.ShareSession
-import com.yunx.app.data.network.video.VideoLinkParser
-import com.yunx.app.data.network.video.VideoMedia
-import com.yunx.app.data.network.video.VideoMediaKind
-import com.yunx.app.data.network.video.VideoParseException
-import com.yunx.app.data.network.video.VideoParseResult
-import com.yunx.app.data.network.video.userMessage
 import com.yunx.app.data.update.UpdateChecker
 import com.yunx.app.data.repository.BaiduAccountRepository
 import com.yunx.app.data.repository.BaiduResolveRepository
@@ -84,7 +71,6 @@ import com.yunx.app.data.repository.UCAccountRepository
 import com.yunx.app.data.repository.UCResolveRepository
 import com.yunx.app.data.repository.XunleiAccountRepository
 import com.yunx.app.data.repository.XunleiResolveRepository
-import com.yunx.app.data.repository.VideoParseRepository
 import com.yunx.app.ui.SnackbarController
 import com.yunx.app.ui.preview.PreviewKind
 import com.yunx.app.ui.preview.PreviewLauncher
@@ -104,8 +90,6 @@ sealed interface ResolveUiState {
     data class Detail(val session: ShareSession, val files: List<ShareFile>) : ResolveUiState
     data class Error(val message: String) : ResolveUiState
 
-    /** 视频解析结果（抖音/小红书/快手/微博/AcFun/B站/Pixiv，与网盘流程互不干扰） */
-    data class Video(val result: VideoParseResult) : ResolveUiState
 }
 
 /**
@@ -135,10 +119,6 @@ class ResolveViewModel(
     private val lanzouResolveRepository: LanzouResolveRepository,
     private val downloadManager: DownloadManager,
     private val bookmarkDao: BookmarkDao,
-    /** GitHub 解析器实例（null 表示未启用 GitHub 平台） */
-    private val githubApi: GitHubApi? = null,
-    /** GitHub 下载镜像前缀提供者（由上层从 SettingsRepository 注入用户配置） */
-    private val mirrorPrefixProvider: () -> String = { UpdateChecker.MIRROR_PREFIX },
     /**
      * 取链方式提供者（由上层从 SettingsRepository 注入）：
      * true = 夸克免转存（直接换直链，不写入网盘，默认）；false = 先转存到临时目录再取链。
@@ -156,13 +136,7 @@ class ResolveViewModel(
      * （工厂侧用 `multiSourceActive()` 判断，已保证 C2 生效时 C1 也开着）。
      * 开启后同一个文件用多个账号各取一条直链，分片轮流交给不同直链下载，见 [fetchMultiSources]。
      */
-    private val multiSourceDownloadProvider: () -> Boolean = { false },
-    /**
-     * 视频解析仓库（抖音/小红书/快手/微博/AcFun/B站/Pixiv）。
-     * null = 视频解析不可用（仅测试或未注入时）：解析入口会原样退回网盘/GitHub 流程。
-     * 放在构造最后并带默认值，避免破坏既有构造点与测试。
-     */
-    private val videoParseRepository: VideoParseRepository? = null
+    private val multiSourceDownloadProvider: () -> Boolean = { false }
 ) : ViewModel() {
 
     var uiState by mutableStateOf<ResolveUiState>(ResolveUiState.Idle)
@@ -548,11 +522,6 @@ class ResolveViewModel(
     /** 下载给定的一批文件/文件夹（文件夹递归展开；全部取链完成后一次性切到下载页） */
     private fun downloadFiles(files: List<ShareFile>) {
         if (files.isEmpty()) return
-        // GitHub 分支：无需凭证/取链 API，逐文件构造直链入队（代码文件夹递归收集 blob）
-        if (currentPlatform == SharePlatform.GITHUB) {
-            batchGitHubDownload(files)
-            return
-        }
         val s = session ?: return
         viewModelScope.launch {
             isBatchWorking = true
@@ -669,109 +638,6 @@ class ResolveViewModel(
         }
     }
 
-    /**
-     * GitHub 批量下载：传入的叶子文件直接入队；代码文件夹（github:code:*）递归 getTree 收集 blob；
-     * Releases 文件夹展开为资产；其余（repo 根/账号列表）跳过。全部直链先经镜像前缀转换。
-     */
-    private fun batchGitHubDownload(files: List<ShareFile>) {
-        viewModelScope.launch {
-            isBatchWorking = true
-            batchProgress = "正在收集文件…"
-            batchCancelRequested = false
-            try {
-                val prefix = mirrorPrefixProvider()
-                val tasks = mutableListOf<Triple<String, String, Long>>() // url, fileName, size
-                // 收集文件
-                for (file in files) {
-                    if (batchCancelRequested) break
-                    when {
-                        // 叶子文件：直接构造 URL
-                        file.fid == "github:zip" || file.fid.startsWith("github:file:") ||
-                            file.fid.startsWith("github:asset:") || file.fid == "github:direct" -> {
-                            githubUrlForFid(file.fid)?.let { url ->
-                                tasks.add(Triple(url, file.fname, file.fsize))
-                            }
-                        }
-                        // 代码文件夹：递归收集 blob（不 recursive，逐层 getTree）
-                        file.fid.startsWith("github:code:") -> {
-                            collectGitHubBlobs(file.fid.removePrefix("github:code:"), "", tasks, 0)
-                        }
-                        // Release 文件夹：展开为资产
-                        file.fid.startsWith("github:release:") -> {
-                            val tag = file.fid.removePrefix("github:release:")
-                            currentGitHubReleases.firstOrNull { it.tagName == tag }?.assets?.forEach { a ->
-                                tasks.add(Triple(a.downloadUrl, a.name, a.size))
-                            }
-                        }
-                        // 其余文件夹（repo 根/账号列表/加载更多）：跳过
-                        else -> {}
-                    }
-                }
-                if (tasks.isEmpty()) {
-                    downloadError = "所选内容无可下载文件"
-                    exitMultiSelect()
-                    return@launch
-                }
-                var okCount = 0
-                for ((index, t) in tasks.withIndex()) {
-                    if (batchCancelRequested) {
-                        downloadError = "已中断批量下载"
-                        break
-                    }
-                    batchProgress = "${index + 1}/${tasks.size}"
-                    runCatching {
-                        downloadManager.enqueue(
-                            url = UpdateChecker.mirrorUrl(t.first, prefix),
-                            fileName = t.second,
-                            size = t.third,
-                            platform = DownloadPlatform.GITHUB,
-                            // 镜像挂掉时回退原始直连（t.first 为未镜像的 GitHub 直链）
-                            fallbackUrl = t.first
-                        )
-                        okCount++
-                    }
-                }
-                if (!batchCancelRequested) {
-                    downloadError = if (okCount > 0) "已加入 $okCount 个下载任务" else "下载失败"
-                    if (okCount > 0) downloadStarted = true
-                }
-                exitMultiSelect()
-            } finally {
-                isBatchWorking = false
-                batchProgress = null
-                batchCancelRequested = false
-            }
-        }
-    }
-
-    /**
-     * 递归收集 GitHub 代码目录下所有 blob 的直链（逐层 getTree，不加 recursive=1）。
-     * 用户在批量下载弹窗点取消后，正在进行的递归收集立即停止，已收集的 blob 不入队。
-     */
-    private suspend fun collectGitHubBlobs(
-        sha: String,
-        prefix: String,
-        result: MutableList<Triple<String, String, Long>>,
-        depth: Int
-    ) {
-        if (depth > 12) return
-        // 取消响应：每层入口与循环中检查，选超大文件夹时取消可立即生效
-        if (batchCancelRequested) return
-        val repo = currentGitHubRepo ?: return
-        val entries = githubApi?.getTree(repo.owner, repo.name, sha) ?: return
-        val branch = repo.defaultBranch
-        for (e in entries) {
-            if (batchCancelRequested) return
-            val displayName = e.path.substringAfterLast('/')
-            if (e.type == "tree") {
-                collectGitHubBlobs(e.sha, if (prefix.isBlank()) displayName else "$prefix/$displayName", result, depth + 1)
-            } else {
-                val url = "https://raw.githubusercontent.com/${repo.owner}/${repo.name}/$branch/${encodePath(e.path)}"
-                result.add(Triple(url, if (prefix.isBlank()) displayName else "$prefix/$displayName", e.size ?: -1))
-            }
-        }
-    }
-
     fun consumeDownloadStarted() {
         downloadStarted = false
     }
@@ -792,38 +658,6 @@ class ResolveViewModel(
     private var currentLink: String? = null
     private var currentPwd: String? = null
 
-    // ---------- GitHub 平台状态 ----------
-
-    /** 当前浏览的 GitHub 仓库（仓库根目录/代码/Releases 时非空） */
-    private var currentGitHubRepo: GitHubRepo? = null
-
-    /** 当前浏览的 GitHub 账号/组织（账号仓库列表时非空） */
-    private var currentGitHubOwner: String? = null
-
-    /** 当前 owner 的类型（"User"/"Organization"），首次加载后缓存，避免分页每页都探测 */
-    private var currentGitHubOwnerType: String? = null
-
-    /** 已累加的 Releases 列表（分页累加） */
-    private val currentGitHubReleases = mutableListOf<GitHubRelease>()
-
-    /** 已累加的账号仓库列表（分页累加） */
-    private val currentGitHubRepos = mutableListOf<GitHubRepo>()
-
-    /** README 原文（仓库根目录加载；纯文本展示，无则 null） */
-    var githubReadme: String? by mutableStateOf(null)
-        private set
-
-    /** forked from 上游全名（fork 仓库根目录显示；非 fork 为 null） */
-    var githubParentFullName: String? by mutableStateOf(null)
-        private set
-
-    /** 文件徽章映射：fid -> 徽章文本（Releases 的 最新/预发布/草稿，账号 repo 的 Fork/语言） */
-    var githubBadges: Map<String, String> by mutableStateOf(emptyMap())
-        private set
-
-    /** 目录令牌：每次进入 GitHub 代码目录自增，用于丢弃异步时间请求的过期结果（防串目录） */
-    private var githubDirToken = 0
-
     /** 当前目录路径名栈（用于面包屑显示），如 [辅助工具, 专用模组] */
     var pathNames by mutableStateOf<List<String>>(emptyList())
         private set
@@ -834,79 +668,7 @@ class ResolveViewModel(
     /** 当前平台（只读暴露给 UI）：游客提示条等按平台给不同文案 */
     val sharePlatform: SharePlatform get() = currentPlatform
 
-    /** 当前是否为 GitHub 平台（UI 据此渲染 README/forked from/徽章等额外内容） */
-    val isGitHubPlatform: Boolean get() = currentPlatform == SharePlatform.GITHUB
-
-    /**
-     * 当前是否停在某个仓库的首页（仓库根目录）：fid 为 `github:root`（链接直达 / 跳上游仓库）
-     * 或 `github:repo:owner/name`（从账号仓库列表点进来）。
-     * README 与 forked from 只在仓库首页渲染：进「代码」「Releases」等子目录不显示，
-     * 返回账号仓库列表（github:account_root）也不残留。
-     */
-    val githubAtRepoRoot: Boolean
-        get() = isGitHubPlatform &&
-            (currentDirFid == "github:root" || currentDirFid.startsWith("github:repo:"))
-
-    /** GitHub 下拉刷新指示器状态 */
-    var githubRefreshing by mutableStateOf(false)
-        private set
-
-    /**
-     * 下拉刷新当前 GitHub 节点：先按前缀清空统一缓存（用户主动刷新要看最新），
-     * 再走 loadGitHubDir 重新请求。代码目录→getTree(+README 仅根目录)、
-     * Releases→重新分页、账号→重新拉仓库列表；失败保持现有数据不崩。非 GitHub 平台忽略。
-     */
-    fun refreshGitHubCurrentNode() {
-        if (!isGitHubPlatform || githubRefreshing) return
-        invalidateCurrentGitHubCache()
-        viewModelScope.launch {
-            githubRefreshing = true
-            try {
-                loadGitHubDir(currentDirFid)
-            } finally {
-                githubRefreshing = false
-            }
-        }
-    }
-
-    /** 按当前 GitHub 节点清空统一缓存前缀（下拉刷新绕缓存用） */
-    private fun invalidateCurrentGitHubCache() {
-        val repo = currentGitHubRepo
-        when {
-            // 仓库根 / 代码目录 / Releases：清该仓库 tree、releases、readme、repo 信息
-            currentDirFid.startsWith("github:root") ||
-                currentDirFid.startsWith("github:code") ||
-                currentDirFid.startsWith("github:release") ||
-                currentDirFid == "github:releases" -> {
-                if (repo != null) {
-                    // 注意：必须用 repo.name（GitHubRepo 是 data class，直接插值会得到 toString，前缀匹配不上缓存 key）
-                    GitHubResponseCache.invalidatePrefix("tree:${repo.owner}/${repo.name}/")
-                    GitHubResponseCache.invalidatePrefix("releases:${repo.owner}/${repo.name}:")
-                    GitHubResponseCache.invalidatePrefix("readme:${repo.owner}/${repo.name}/")
-                    GitHubResponseCache.invalidatePrefix("repo:${repo.owner}/${repo.name}")
-                    // 代码目录时间缓存一并失效：用户主动刷新期望看到最新提交时间
-                    GitHubCommitDateCache.invalidatePrefix("${repo.owner}/${repo.name}/")
-                }
-            }
-            // 账号仓库列表：清该 owner 的 users/orgs 列表与类型
-            currentDirFid == "github:account_root" -> {
-                currentGitHubOwner?.let { owner ->
-                    GitHubResponseCache.invalidatePrefix("userrepos:$owner:")
-                    GitHubResponseCache.invalidatePrefix("orgrepos:$owner:")
-                    GitHubResponseCache.invalidatePrefix("usertype:$owner")
-                }
-            }
-        }
-    }
-
-    /** README 渲染用：当前仓库 owner（账号/组织浏览或无仓库时为 null） */
-    val githubRepoOwner: String? get() = currentGitHubRepo?.owner
-    /** README 渲染用：当前仓库名 */
-    val githubRepoName: String? get() = currentGitHubRepo?.name
-    /** README 渲染用：默认分支（用于相对链接补全） */
-    val githubDefaultBranch: String? get() = currentGitHubRepo?.defaultBranch
-
-    /** 当前平台凭证（夸克/UC/百度/139/115 用 cookie，迅雷/123 用 access_token；GitHub 无需凭证） */
+    /** 当前平台凭证（夸克/UC/百度/139/115 用 cookie，迅雷/123 用 access_token） */
     private suspend fun currentCredential(): String? = when (currentPlatform) {
         SharePlatform.UC -> ucAccountRepository.getAccount()?.cookie
         SharePlatform.XUNLEI -> xunleiAccountRepository.getAccount()?.accessToken
@@ -1021,156 +783,12 @@ class ResolveViewModel(
         else -> "夸克网盘"
     }
 
-    // ---------- 视频解析（抖音/小红书/快手/微博/AcFun/B站/Pixiv） ----------
-
-    /**
-     * 视频解析入口：识别到视频链接就走视频流程，识别不到则原样退回网盘/GitHub 解析。
-     * 这样 UI 三条入口（手动输入 / 深链接 / 主页快捷方式）都只需无条件调用本方法。
-     *
-     * @param pwd 网盘分享的提取码：仅在回退到网盘流程时透传，视频流程不使用。
-     */
-    fun startVideoResolve(text: String, pwd: String? = null) {
-        val link = VideoLinkParser.parse(text)
-        val repo = videoParseRepository
-        // 识别不到视频链接 / 未注入视频仓库：退回原有网盘解析（startResolve 内部会先试 GitHub再试网盘）
-        if (link == null || repo == null) {
-            startResolve(text, pwd)
-            return
-        }
-        // 视频结果不涉及网盘会话与凭证，因此**不设置** currentPlatform（那是网盘枚举）。
-        // 需要展示「当前平台」文案时，UI 直接用 result.platform.displayName。
-        viewModelScope.launch {
-            uiState = ResolveUiState.Loading
-            try {
-                val result = repo.parse(link)
-                // 解析成功但内容有降级（如小红书去水印原图不可用、已回退到平台地址）：弹一次非致命提示
-                result.notice.takeIf { it.isNotBlank() }?.let { SnackbarController.show(it) }
-                uiState = ResolveUiState.Video(result)
-            } catch (e: VideoParseException) {
-                uiState = ResolveUiState.Error(e.userMessage())
-            } catch (e: Exception) {
-                uiState = ResolveUiState.Error("解析失败，请稍后重试")
-            }
-        }
-    }
-
-    /**
-     * 下载单个视频媒体。
-     * HLS 无需特殊处理：[DownloadManager] 按 URL 是否含 `.m3u8` 自动走 HLS 路径。
-     */
-    fun downloadVideoMedia(media: VideoMedia) {
-        val result = (uiState as? ResolveUiState.Video)?.result ?: return
-        viewModelScope.launch {
-            val index = result.medias.indexOf(media).takeIf { it >= 0 }?.plus(1) ?: 1
-            try {
-                downloadManager.enqueue(
-                    url = media.url,
-                    fileName = media.fileName.ifBlank { videoMediaFileName(result.title, index, media.kind) },
-                    headers = media.headers,
-                    size = media.size,
-                    platform = DownloadPlatform.VIDEO,
-                    // B站 DASH 高清是音视频分离的两路流：带上音轨地址，由下载器下完两轨再合轨
-                    mergeAudioUrl = media.audioUrl,
-                    mergeAudioHeaders = media.audioHeaders,
-                    // 动图（Live Photo）：带上动图资源，由下载器合成为一张「动态照片」
-                    motionUrl = media.motionUrl
-                )
-                downloadStarted = true
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                downloadError = "加入下载任务失败，请稍后重试"
-            }
-        }
-    }
-
-    /**
-     * 一键下载当前视频结果里的全部媒体：逐个入队，结束后用 [downloadError] 给出结果提示
-     * （网盘批量下载同样用它当结果通道），入队成功则触发跳转到下载页。
-     */
-    fun downloadAllVideoMedia() {
-        val result = (uiState as? ResolveUiState.Video)?.result ?: return
-        downloadVideoMedias(result.medias)
-    }
-
-    /**
-     * 批量下载一组媒体（图集的「全部下载」/多选后的「下载所选」共用）。
-     *
-     * ★ **多张时文件名带「作品标题/」前缀**：下载页是按 `fileName` 里的 `/` 把任务收纳成**可折叠的
-     *   文件夹组**（就是网盘「整个文件夹下载」那一套机制，见 `DownloadScreen` 的 `folderGroups`）。
-     *   于是图集批量下载在下载页是**一个分组**，而不是几十张散落各处的图片任务。
-     *   **单张不加前缀** —— 一个只有一张图的「文件夹」没有意义。
-     */
-    fun downloadVideoMedias(medias: List<VideoMedia>) {
-        val result = (uiState as? ResolveUiState.Video)?.result ?: return
-        if (medias.isEmpty()) return
-        val folder = if (medias.size > 1) DownloadPathPolicy.sanitizeName(result.title).take(40) else ""
-        viewModelScope.launch {
-            var okCount = 0
-            var failReason: String? = null
-            try {
-                medias.forEachIndexed { i, media ->
-                    // 序号只用于文件名兜底：优先用解析器给好的 fileName
-                    val index = result.medias.indexOf(media).takeIf { it >= 0 }?.plus(1) ?: (i + 1)
-                    val name = media.fileName.ifBlank {
-                        videoMediaFileName(result.title, index, media.kind)
-                    }
-                    downloadManager.enqueue(
-                        url = media.url,
-                        fileName = if (folder.isBlank()) name else "$folder/$name",
-                        headers = media.headers,
-                        size = media.size,
-                        platform = DownloadPlatform.VIDEO,
-                        // B站 DASH 分轨：音轨一起交给下载器合轨（与逐条下载保持一致，
-                        // 少了这个「全部下载」会下出一个没有声音的视频）
-                        mergeAudioUrl = media.audioUrl,
-                        mergeAudioHeaders = media.audioHeaders,
-                        // 动图同理：不带动图资源就会下成一张不会动的静图
-                        motionUrl = media.motionUrl
-                    )
-                    okCount++
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                failReason = e.message
-            }
-            if (okCount > 0) {
-                downloadError = "已加入 $okCount 个下载任务"
-                downloadStarted = true
-            } else {
-                // 一个都没入队：把原因写出来，不要静默失败
-                downloadError = failReason?.takeIf { it.isNotBlank() } ?: "加入下载任务失败，请稍后重试"
-            }
-        }
-    }
-
-    /** 视频媒体文件名的兜底：`标题_序号.扩展名`（扩展名按媒体类型推断） */
-    private fun videoMediaFileName(title: String, index: Int, kind: VideoMediaKind): String {
-        val ext = when (kind) {
-            VideoMediaKind.VIDEO -> "mp4"
-            VideoMediaKind.IMAGE -> "jpg"
-            VideoMediaKind.AUDIO -> "mp3"
-        }
-        val base = title.ifBlank { "video" }.take(40)
-        return "${base}_${index}.$ext"
-    }
-
-    /** 开始解析：链接 → token →（密码）→ 根目录列表 */
     fun startResolve(link: String, pwd: String?) {
         currentLink = link
         currentPwd = pwd
-        // GitHub 链接统一识别：仓库 / 账号 / 文件直链 → GitHub 解析流程。
-        // 放在网盘解析之前，使「收藏打开 / 剪贴板 / 解析页 / 后续系统分享」等所有
-        // 走 startResolve 的入口都能解析 GitHub 链接，无需在 UI 层各处重复判断。
-        val github = GitHubLinkParser.parse(link)
-        if (github != null) {
-            startGitHubResolve(github)
-            return
-        }
         viewModelScope.launch {
             uiState = ResolveUiState.Loading
-            // 中文口令兜底（既不是分享链接、也不是 GitHub 链接）：**先迅雷，迅雷没给出可用链接再问星海**。
+            // 中文口令兜底（不是分享链接）：**先迅雷，迅雷没给出可用链接再问星海**。
             // ① 迅雷口令（如「张三丰资源」）：口令是「分享链接 + 提取码」的打包形式，打 shoulei 跳转接口换链接；
             // ② 星海（夸克/UC 中文口令）：换回 pwd_id，再合成分享链接，后续提取码/登录/列表/取链全走既有链路。
             // 两个服务都用同一段原文，成功即止；都失败时把原因带出去（而不是只丢一句「无法识别」）。
@@ -1224,10 +842,6 @@ class ResolveViewModel(
     fun startUpdateDownload(link: String) {
         updateFallbackToResolve = false
         viewModelScope.launch {
-            if (GitHubLinkParser.parse(link) != null) {
-                fallbackToResolve(link, null)
-                return@launch
-            }
             val parsed = ShareLinkParser.parse(link)
             if (parsed == null) {
                 fallbackToResolve(link, null)
@@ -1298,430 +912,8 @@ class ResolveViewModel(
         startResolve(link, pwd)
     }
 
-    // ---------- GitHub 平台入口与导航 ----------
-
-    /**
-     * GitHub 链接解析入口：仓库 → 代码/Releases 根；账号 → 仓库列表；直链 → 直接弹下载确认。
-     * 复用 ShareDetailScreen 框架（搜索/多选/批量/确认弹窗/收藏/面包屑），canSave=false（无转存）。
-     */
-    fun startGitHubResolve(linkType: GitHubLinkType) {
-        currentPlatform = SharePlatform.GITHUB
-        // GitHub 不需要登录，也不属于「游客模式」提示的适用范围
-        isGuest = false
-        currentPwd = null
-        // 重置 GitHub 状态
-        currentGitHubRepo = null
-        currentGitHubOwner = null
-        currentGitHubReleases.clear()
-        currentGitHubRepos.clear()
-        githubReadme = null
-        githubParentFullName = null
-        githubBadges = emptyMap()
-        dirStack.clear()
-        pathNames = emptyList()
-        viewModelScope.launch {
-            uiState = ResolveUiState.Loading
-            when (linkType) {
-                is GitHubLinkType.Repository -> {
-                    currentLink = "https://github.com/${linkType.owner}/${linkType.repo}"
-                    val repo = githubApi?.getRepo(linkType.owner, linkType.repo)
-                    if (repo == null) {
-                        uiState = ResolveUiState.Error("无法获取仓库信息：${linkType.owner}/${linkType.repo}")
-                        return@launch
-                    }
-                    session = ShareSession(shareId = "github:${repo.fullName}", stoken = "", title = repo.fullName)
-                    currentGitHubRepo = repo
-                    currentDirFid = "github:root"
-                    loadGitHubRoot()
-                }
-                is GitHubLinkType.Account -> {
-                    currentLink = "https://github.com/${linkType.owner}"
-                    session = ShareSession(shareId = "github:user:${linkType.owner}", stoken = "", title = linkType.owner)
-                    currentGitHubOwner = linkType.owner
-                    currentDirFid = "github:account_root"
-                    loadGitHubAccountRepos(firstPage = true)
-                }
-                is GitHubLinkType.DirectFile -> {
-                    currentLink = linkType.url
-                    session = ShareSession(shareId = "github:direct", stoken = "", title = linkType.fileName)
-                    // 直链：直接构造 DownloadLink 弹确认弹窗（不进入文件列表）
-                    downloadLink = DownloadLink(
-                        fid = "github:direct",
-                        filename = linkType.fileName,
-                        downloadUrl = linkType.url,
-                        size = -1
-                    )
-                    uiState = ResolveUiState.Idle
-                }
-            }
-        }
-    }
-
-    /** 点击「forked from」：跳转到上游仓库根目录 */
-    fun openGitHubParentRepo() {
-        val parent = githubParentFullName ?: return
-        val owner = parent.substringBefore('/')
-        val repoName = parent.substringAfter('/')
-        viewModelScope.launch {
-            uiState = ResolveUiState.Loading
-            // 从父仓库进入：重置当前仓库上下文，回到顶层仓库根
-            dirStack.clear()
-            pathNames = emptyList()
-            val repo = githubApi?.getRepo(owner, repoName)
-            if (repo == null) {
-                uiState = ResolveUiState.Error("无法打开上游仓库：$parent")
-                return@launch
-            }
-            session = ShareSession(shareId = "github:${repo.fullName}", stoken = "", title = repo.fullName)
-            currentGitHubRepo = repo
-            currentDirFid = "github:root"
-            loadGitHubRoot()
-        }
-    }
-
-    /** 根目录：代码 + Releases 两个文件夹；并行加载 README 与 forked-from 标记 */
-    private suspend fun loadGitHubRoot() {
-        val repo = currentGitHubRepo ?: return
-        githubParentFullName = if (repo.fork) repo.parentFullName else null
-        githubBadges = emptyMap()
-        // README 并行加载，不阻塞根目录列表
-        viewModelScope.launch {
-            githubReadme = githubApi?.getReadme(repo.owner, repo.name, repo.defaultBranch)
-        }
-        val files = listOf(
-            ShareFile(
-                fid = "github:code:${repo.defaultBranch}",
-                fname = "代码",
-                fsize = -1,
-                isdir = true,
-                pdirFid = "",
-                fidToken = "",
-                modifyTime = repo.pushedAt.orEmpty()
-            ),
-            ShareFile(
-                fid = "github:releases",
-                fname = "Releases",
-                fsize = -1,
-                isdir = true,
-                pdirFid = "",
-                fidToken = ""
-            )
-        )
-        uiState = ResolveUiState.Detail(session!!, files)
-    }
-
-    /** 代码目录：tree（不 recursive）映射为文件夹/文件；根代码目录首项加源码 ZIP */
-    private suspend fun loadGitHubCodeDir(sha: String) {
-        val repo = currentGitHubRepo ?: return
-        val entries = githubApi?.getTree(repo.owner, repo.name, sha)
-        if (entries == null) {
-            uiState = ResolveUiState.Error("加载目录失败")
-            return
-        }
-        // 目录令牌：每次加载自增；异步时间请求回来时比对，防止切换目录后旧结果串层
-        val dirToken = ++githubDirToken
-        val files = mutableListOf<ShareFile>()
-        // 根代码目录（sha == 默认分支）首项：下载完整源码 ZIP（时间用 pushedAt，无需额外请求）
-        if (sha == repo.defaultBranch) {
-            files.add(
-                ShareFile(
-                    fid = "github:zip",
-                    fname = "下载完整源码 ZIP",
-                    fsize = -1,
-                    isdir = false,
-                    pdirFid = "",
-                    fidToken = "",
-                    modifyTime = repo.pushedAt.orEmpty()
-                )
-            )
-        }
-        for (e in entries) {
-            val displayName = e.path.substringAfterLast('/')
-            if (e.type == "tree") {
-                files.add(
-                    ShareFile(
-                        fid = "github:code:${e.sha}",
-                        fname = displayName,
-                        fsize = -1,
-                        isdir = true,
-                        pdirFid = "",
-                        fidToken = ""
-                    )
-                )
-            } else {
-                files.add(
-                    ShareFile(
-                        fid = "github:file:${e.path}",
-                        fname = displayName,
-                        fsize = e.size ?: -1,
-                        isdir = false,
-                        pdirFid = "",
-                        fidToken = ""
-                    )
-                )
-            }
-        }
-        // 先渲染列表（含大小），再并行补时间
-        uiState = ResolveUiState.Detail(session!!, files)
-        // 并行请求每个条目最后提交时间（Semaphore 限流保护匿名 60/h）；失败静默留空
-        viewModelScope.launch {
-            val semaphore = Semaphore(8)
-            val timeMap = java.util.concurrent.ConcurrentHashMap<String, String>()
-            val api = githubApi
-            coroutineScope {
-                entries.forEach { e ->
-                    launch {
-                        semaphore.withPermit {
-                            // 走内存缓存：命中不发请求，失败/限流结果缓存 1 分钟，in-flight 去重
-                            if (api != null) {
-                                GitHubCommitDateCache.get(repo.owner, repo.name, e.path, api)
-                                    ?.let { iso -> timeMap[e.path] = iso }
-                            }
-                        }
-                    }
-                }
-            }
-            // 目录已切换则丢弃旧结果
-            if (dirToken != githubDirToken) return@launch
-            if (timeMap.isEmpty()) return@launch
-            val updated = files.map { f ->
-                val path = when {
-                    f.fid.startsWith("github:file:") -> f.fid.removePrefix("github:file:")
-                    // tree 条目：fid 是 github:code:{sha}，反查 path 用 entries 中 sha->path
-                    f.fid.startsWith("github:code:") -> entries.firstOrNull { it.sha == f.fid.removePrefix("github:code:") }?.path
-                    else -> null
-                }
-                if (path != null && timeMap[path] != null) f.copy(modifyTime = timeMap[path]!!) else f
-            }
-            uiState = ResolveUiState.Detail(session!!, updated)
-        }
-    }
-
-    /** Releases 列表：分页累加；首个非预发布非草稿标记为「最新」；满页加「加载更多」 */
-    private suspend fun loadGitHubReleases(firstPage: Boolean, page: Int = 1) {
-        val repo = currentGitHubRepo ?: return
-        if (firstPage) {
-            currentGitHubReleases.clear()
-        }
-        val rels = githubApi?.getReleases(repo.owner, repo.name, page = page)
-        if (rels == null && page == 1) {
-            uiState = ResolveUiState.Error("加载 Releases 失败")
-            return
-        }
-        if (rels != null) {
-            // 并发/重放的加载（切 Tab 会重放 ShareDetailScreen 的 LaunchedEffect）会重复追加同一页，
-            // fid 重复 → LazyColumn key 冲突崩溃；按 tagName 去重后追加
-            val seen = currentGitHubReleases.mapTo(HashSet()) { it.tagName }
-            currentGitHubReleases.addAll(rels.filter { seen.add(it.tagName) })
-        }
-        // 计算徽章：第一个非预发布非草稿 = 最新；其余按 prerelease/draft
-        val badgeMap = mutableMapOf<String, String>()
-        var latestMarked = false
-        for (rel in currentGitHubReleases) {
-            val fid = "github:release:${rel.tagName}"
-            when {
-                rel.draft -> badgeMap[fid] = "草稿"
-                rel.prerelease -> badgeMap[fid] = "预发布"
-                !latestMarked -> {
-                    badgeMap[fid] = "最新"
-                    latestMarked = true
-                }
-            }
-        }
-        githubBadges = badgeMap
-        val files = currentGitHubReleases.map { rel ->
-            ShareFile(
-                fid = "github:release:${rel.tagName}",
-                fname = rel.tagName,
-                fsize = -1,
-                isdir = true,
-                pdirFid = "",
-                fidToken = "",
-                modifyTime = rel.publishedAt ?: ""
-            )
-        }.toMutableList()
-        // 满页（100 条）追加「加载更多」虚拟文件夹
-        if (rels != null && rels.size == 100) {
-            files.add(
-                ShareFile(
-                    fid = "github:more_rel:${page + 1}",
-                    fname = "加载更多",
-                    fsize = -1,
-                    isdir = true,
-                    pdirFid = "",
-                    fidToken = ""
-                )
-            )
-        }
-        uiState = ResolveUiState.Detail(session!!, files)
-    }
-
-    /** 单个 Release 的资产列表 */
-    private suspend fun loadGitHubReleaseAssets(tag: String) {
-        val rel = currentGitHubReleases.firstOrNull { it.tagName == tag }
-        if (rel == null) {
-            uiState = ResolveUiState.Error("未找到 Release：$tag")
-            return
-        }
-        githubBadges = emptyMap()
-        val files = rel.assets.map { a ->
-            ShareFile(
-                fid = "github:asset:${a.downloadUrl}",
-                fname = a.name,
-                fsize = a.size,
-                isdir = false,
-                pdirFid = "",
-                fidToken = "",
-                modifyTime = a.updatedAt.orEmpty()
-            )
-        }
-        uiState = ResolveUiState.Detail(session!!, files)
-    }
-
-    /** 账号/组织仓库列表：先用 /users/{owner} 的 type 字段一次选对端点，避免「users 失败再 orgs」冗余请求；分页累加；满页加「加载更多」 */
-    private suspend fun loadGitHubAccountRepos(firstPage: Boolean, page: Int = 1) {
-        val owner = currentGitHubOwner ?: return
-        if (firstPage) {
-            currentGitHubRepos.clear()
-            currentGitHubOwnerType = null
-        }
-        // 首次加载先探测 owner 类型并缓存；type=Organization 走 orgs 端点，其余走 users
-        if (currentGitHubOwnerType == null) {
-            currentGitHubOwnerType = githubApi?.getUserType(owner)
-        }
-        var repos = if (currentGitHubOwnerType == "Organization") {
-            githubApi?.getOrgRepos(owner, page = page)
-        } else {
-            // User 或类型探测失败：先走 users；仍失败兜底 orgs（保持对异常情况的兼容）
-            githubApi?.getUserRepos(owner, page = page)
-        }
-        if (repos == null && currentGitHubOwnerType != "Organization") {
-            repos = githubApi?.getOrgRepos(owner, page = page)
-        }
-        if (repos == null && page == 1) {
-            uiState = ResolveUiState.Error("无法获取 $owner 的仓库列表")
-            return
-        }
-        if (repos != null) {
-            // 同上：按 fullName 去重，避免重复 fid 触发 LazyColumn key 冲突
-            val seen = currentGitHubRepos.mapTo(HashSet()) { it.fullName }
-            currentGitHubRepos.addAll(repos.filter { seen.add(it.fullName) })
-        }
-        // 徽章：fork 标记 + 主语言
-        val badgeMap = mutableMapOf<String, String>()
-        for (r in currentGitHubRepos) {
-            val fid = "github:repo:${r.fullName}"
-            val parts = buildList {
-                if (r.fork) add("Fork")
-                r.language?.let { add(it) }
-            }
-            if (parts.isNotEmpty()) badgeMap[fid] = parts.joinToString(" · ")
-        }
-        githubBadges = badgeMap
-        val files = currentGitHubRepos.map { r ->
-            ShareFile(
-                fid = "github:repo:${r.fullName}",
-                fname = r.name,
-                fsize = -1,
-                isdir = true,
-                pdirFid = "",
-                fidToken = "",
-                modifyTime = r.updatedAt.orEmpty()
-            )
-        }.toMutableList()
-        if (repos != null && repos.size == 100) {
-            files.add(
-                ShareFile(
-                    fid = "github:more_acct:${page + 1}",
-                    fname = "加载更多",
-                    fsize = -1,
-                    isdir = true,
-                    pdirFid = "",
-                    fidToken = ""
-                )
-            )
-        }
-        uiState = ResolveUiState.Detail(session!!, files)
-    }
-
-    /** 按 fid 分发加载对应目录层 */
-    private suspend fun loadGitHubDir(fid: String) {
-        when {
-            fid == "github:root" -> loadGitHubRoot()
-            fid.startsWith("github:code:") -> loadGitHubCodeDir(fid.removePrefix("github:code:"))
-            fid == "github:releases" -> loadGitHubReleases(firstPage = true)
-            fid.startsWith("github:release:") -> loadGitHubReleaseAssets(fid.removePrefix("github:release:"))
-            fid == "github:account_root" -> loadGitHubAccountRepos(firstPage = true)
-            fid.startsWith("github:more_rel:") -> {
-                val p = fid.removePrefix("github:more_rel:").toIntOrNull() ?: return
-                loadGitHubReleases(firstPage = false, page = p)
-            }
-            fid.startsWith("github:more_acct:") -> {
-                val p = fid.removePrefix("github:more_acct:").toIntOrNull() ?: return
-                loadGitHubAccountRepos(firstPage = false, page = p)
-            }
-            fid.startsWith("github:repo:") -> {
-                val fullName = fid.removePrefix("github:repo:")
-                val owner = fullName.substringBefore('/')
-                val repoName = fullName.substringAfter('/')
-                val repo = githubApi?.getRepo(owner, repoName)
-                if (repo == null) {
-                    uiState = ResolveUiState.Error("无法打开仓库：$fullName")
-                    return
-                }
-                currentGitHubRepo = repo
-                githubReadme = null
-                loadGitHubRoot()
-            }
-            else -> uiState = ResolveUiState.Error("未知目录：$fid")
-        }
-    }
-
-    /** 根据 GitHub fid 计算下载直链（raw / codeload / asset url / 直链）；无法识别返回 null */
-    private fun githubUrlForFid(fid: String): String? {
-        val repo = currentGitHubRepo ?: return null
-        val branch = repo.defaultBranch
-        return when {
-            fid == "github:zip" ->
-                "https://codeload.github.com/${repo.owner}/${repo.name}/zip/refs/heads/$branch"
-            fid.startsWith("github:file:") -> {
-                val path = fid.removePrefix("github:file:")
-                "https://raw.githubusercontent.com/${repo.owner}/${repo.name}/$branch/${encodePath(path)}"
-            }
-            fid.startsWith("github:asset:") -> fid.removePrefix("github:asset:")
-            // github:direct（直链）在 startGitHubResolve 已直接设置 downloadLink，不走此方法
-            else -> null
-        }
-    }
-
-    /**
-     * 对 raw 直链路径逐段 URL 编码（保留 `/` 分隔符）。
-     * 文件名含 `#`/`?`/空格/中文等字符时，未编码会导致 URL 在 `#`/`?` 处截断。
-     */
-    private fun encodePath(path: String): String =
-        path.split('/').joinToString("/") { java.net.URLEncoder.encode(it, "UTF-8") }
-
     /** 进入文件夹 */
     fun openFolder(file: ShareFile) {
-        // GitHub 分支：fid 前缀分发，无需网盘凭证
-        if (currentPlatform == SharePlatform.GITHUB) {
-            // 「加载更多」虚拟项：原地追加分页，不入目录栈
-            if (file.fid.startsWith("github:more_")) {
-                viewModelScope.launch {
-                    uiState = ResolveUiState.Loading
-                    loadGitHubDir(file.fid)
-                }
-                return
-            }
-            dirStack.addLast(currentDirFid)
-            pathNames = pathNames + file.fname
-            currentDirFid = file.fid
-            viewModelScope.launch {
-                uiState = ResolveUiState.Loading
-                loadGitHubDir(file.fid)
-            }
-            return
-        }
         val s = session ?: return
         dirStack.addLast(currentDirFid)
         pathNames = pathNames + file.fname
@@ -1736,17 +928,6 @@ class ResolveViewModel(
 
     /** 返回上级目录 */
     fun goBack() {
-        // GitHub 分支：无需凭证，按 fid 重新加载对应层
-        if (currentPlatform == SharePlatform.GITHUB) {
-            if (dirStack.isEmpty()) return
-            currentDirFid = dirStack.removeLast()
-            pathNames = pathNames.dropLast(1)
-            viewModelScope.launch {
-                uiState = ResolveUiState.Loading
-                loadGitHubDir(currentDirFid)
-            }
-            return
-        }
         val s = session ?: return
         if (dirStack.isEmpty()) return
         currentDirFid = dirStack.removeLast()
@@ -1774,14 +955,6 @@ class ResolveViewModel(
         currentLink = null
         currentPwd = null
         pathNames = emptyList()
-        // 重置 GitHub 平台状态
-        currentGitHubRepo = null
-        currentGitHubOwner = null
-        currentGitHubReleases.clear()
-        currentGitHubRepos.clear()
-        githubReadme = null
-        githubParentFullName = null
-        githubBadges = emptyMap()
         isGuest = false
         uiState = ResolveUiState.Idle
     }
@@ -1820,14 +993,6 @@ class ResolveViewModel(
         while (dirStack.size > level) dirStack.removeLast()
         currentDirFid = if (dirStack.isEmpty()) currentDefaultDirFid() else dirStack.last()
         pathNames = pathNames.take(level)
-        // GitHub 分支：无需凭证，按 fid 重新加载
-        if (currentPlatform == SharePlatform.GITHUB) {
-            viewModelScope.launch {
-                uiState = ResolveUiState.Loading
-                loadGitHubDir(currentDirFid)
-            }
-            return
-        }
         val s = session ?: return
         viewModelScope.launch {
             // 游客模式：面包屑回退同样允许匿名列出目录
@@ -1871,33 +1036,8 @@ class ResolveViewModel(
         return repo.getShareDownloadLink(session, file, credential)
     }
 
-    /** 获取文件下载直链（各平台实现不同：夸克免转存优先（失败回退转存）/ UC 直接取 / 迅雷转存后取详情直链；GitHub 直接构造 URL） */
+    /** 获取文件下载直链（各平台实现不同：夸克免转存优先（失败回退转存）/ UC 直接取 / 迅雷转存后取详情直链） */
     fun fetchDownloadLink(file: ShareFile) {
-        // GitHub 分支：无需 API 取链，按 fid 直接构造下载 URL 弹确认弹窗
-        if (currentPlatform == SharePlatform.GITHUB) {
-            viewModelScope.launch {
-                downloadLink = null
-                downloadError = null
-                isFetchingDownloadLink = true
-                try {
-                    // 直链文件（DirectFile）在 startGitHubResolve 已设置 downloadLink；这里仅处理列表内文件
-                    val url = githubUrlForFid(file.fid)
-                    if (url == null) {
-                        downloadError = "无法获取下载链接"
-                        return@launch
-                    }
-                    downloadLink = DownloadLink(
-                        fid = file.fid,
-                        filename = file.fname,
-                        downloadUrl = url,
-                        size = file.fsize
-                    )
-                } finally {
-                    isFetchingDownloadLink = false
-                }
-            }
-            return
-        }
         viewModelScope.launch {
             downloadLink = null
             downloadError = null
@@ -1969,10 +1109,8 @@ class ResolveViewModel(
      *   但复用同一套加载态（[isFetchingDownloadLink]，由 ResolveScreen 显示加载弹窗）与错误反馈
      *   （[downloadError]），取链失败绝不静默。
      *
-     * GitHub 的「直链」是按仓库路径构造出来的下载地址，属于仓库浏览流程，不提供在线预览。
      */
     fun openPreview(file: ShareFile) {
-        if (currentPlatform == SharePlatform.GITHUB) return
         // 入口可见性已由 PreviewTypes 判断，这里再挡一次：不可预览的类型（压缩包/未知）不进取链流程
         val kind = PreviewTypes.kindOf(file.fname) ?: return
         val title = file.fname.ifBlank { "在线预览" }
@@ -2245,20 +1383,6 @@ class ResolveViewModel(
         viewModelScope.launch {
             // 开始下载：先关闭弹窗（临时转存由下载完成 onComplete 清理，不在此时删）
             downloadLink = null
-            // GitHub 分支：无需网盘凭证，直链先经镜像前缀转换，带 size 和 platform=github 入队
-            if (currentPlatform == SharePlatform.GITHUB) {
-                val prefix = mirrorPrefixProvider()
-                downloadManager.enqueue(
-                    url = UpdateChecker.mirrorUrl(link.downloadUrl, prefix),
-                    fileName = link.filename,
-                    size = link.size,
-                    platform = DownloadPlatform.GITHUB,
-                    // 镜像挂掉时回退原始直连（link.downloadUrl 为未镜像的 GitHub 直链）
-                    fallbackUrl = link.downloadUrl
-                )
-                downloadStarted = true
-                return@launch
-            }
             // 游客模式：夸克/UC 的小文件直链不要求登录（link 里已带游客 __pugs）
             val credential = currentCredential().orEmpty()
             if (credential.isBlank() && !supportsGuestDownload()) {
@@ -2311,13 +1435,9 @@ class ResolveViewModel(
         private val lanzouResolveRepository: LanzouResolveRepository,
         private val downloadManager: DownloadManager,
         private val bookmarkDao: BookmarkDao,
-        private val githubApi: GitHubApi? = null,
-        private val mirrorPrefixProvider: () -> String = { UpdateChecker.MIRROR_PREFIX },
         private val noSaveDownloadProvider: () -> Boolean = { true },
         private val multiAccountDownloadProvider: () -> Boolean = { false },
-        private val multiSourceDownloadProvider: () -> Boolean = { false },
-        /** 视频解析仓库；null 时视频解析不可用（入口自动回退网盘/GitHub 流程） */
-        private val videoParseRepository: VideoParseRepository? = null
+        private val multiSourceDownloadProvider: () -> Boolean = { false }
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -2335,12 +1455,9 @@ class ResolveViewModel(
                 lanzouAccountRepository, lanzouResolveRepository,
                 downloadManager,
                 bookmarkDao,
-                githubApi,
-                mirrorPrefixProvider,
                 noSaveDownloadProvider,
                 multiAccountDownloadProvider,
-                multiSourceDownloadProvider,
-                videoParseRepository
+                multiSourceDownloadProvider
             ) as T
         }
     }

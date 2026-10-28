@@ -350,7 +350,7 @@ private fun ZoomableImage(media: PreviewMedia, modifier: Modifier = Modifier) {
 /**
  * 逐请求请求头（Coil 3：`coil3.network.NetworkHeaders`）。没有 UA 时补项目统一桌面 UA，避免被 CDN 拒。
  *
- * ★ `internal` 而不是 private：解析结果页的图片缩略图（`VideoResultSection` 的两列网格）也要用同一套
+ * ★ `internal` 而不是 private：供预览组件复用同一套
  *   请求头 —— 图集缩略图和全屏大图必须带一模一样的 Referer/Cookie，否则一个能出一个出不来。
  */
 internal fun previewNetworkHeaders(headers: Map<String, String>): NetworkHeaders {

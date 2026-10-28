@@ -97,15 +97,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.yunx.app.data.db.BookmarkEntity
-import com.yunx.app.data.network.GitHubLinkParser
 import com.yunx.app.data.network.ShareLinkParser
 import com.yunx.app.data.network.SharePlatform
-import com.yunx.app.data.network.video.VideoLinkParser
 import com.yunx.app.ui.SnackbarController
-import com.mikepenz.markdown.m3.Markdown
 import com.yunx.app.ui.components.FileNameText
-import com.yunx.app.ui.components.GitHubMarkdownImageTransformer
-import com.yunx.app.ui.components.compactMarkdownTypography
 import com.yunx.app.ui.items.logoRes
 import com.yunx.app.ui.resolve.DownloadLinkDialog
 import com.yunx.app.ui.resolve.ShareDetailScreen
@@ -179,7 +174,7 @@ fun ResolveScreen(
     var pwd by rememberSaveable { mutableStateOf("") }
     var pwdEdited by rememberSaveable { mutableStateOf(false) }
 
-    // 深链接 / 外部分享进来：走统一解析入口（先试视频、再试 GitHub / 网盘），
+    // 深链接 / 外部分享进来：走网盘解析入口，
     // 但**直接发起解析**——用户是明确点了链接/分享了链接，不该再让他手动点一次「解析」。
     LaunchedEffect(incomingLink) {
         val text = incomingLink?.trim().orEmpty()
@@ -188,7 +183,7 @@ fun ResolveScreen(
         link = text
         pwd = shareParsed?.pwd.orEmpty()
         pwdEdited = true
-        viewModel.startVideoResolve(text, shareParsed?.pwd)
+        viewModel.startResolve(text, shareParsed?.pwd)
         onIncomingLinkConsumed()
     }
 
@@ -205,8 +200,7 @@ fun ResolveScreen(
             text.isNotBlank() &&
             text != link &&
             text != ignoredClipboard &&
-            (ShareLinkParser.parse(text) != null || GitHubLinkParser.parse(text) != null ||
-                VideoLinkParser.looksLikeVideoLink(text))
+            ShareLinkParser.parse(text) != null
         ) {
             clipboardSuggestion = text
         }
@@ -301,90 +295,8 @@ fun ResolveScreen(
                     onExit = { viewModel.backToInput() },
                     // 列表「返回上一级」：子目录回上级，根目录回输入页
                     onBack = { viewModel.navigateBack() },
-                    // GitHub 专属：forked from 头部、README 底部（只在仓库首页显示，进子目录/退回账号列表不残留）
-                    extraHeaderContent = if (viewModel.githubAtRepoRoot) {
-                        {
-                            val parent = viewModel.githubParentFullName
-                            if (parent != null) {
-                                TextButton(
-                                    onClick = { viewModel.openGitHubParentRepo() },
-                                    contentPadding = PaddingValues(vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = "forked from $parent",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    } else null,
-                    extraFooterContent = if (viewModel.githubAtRepoRoot) {
-                        {
-                            val md = viewModel.githubReadme
-                            val owner = viewModel.githubRepoOwner
-                            val repo = viewModel.githubRepoName
-                            val branch = viewModel.githubDefaultBranch
-                            if (!md.isNullOrBlank() && owner != null && repo != null && branch != null) {
-                                Column(modifier = Modifier.padding(top = 12.dp)) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(1.dp)
-                                            .background(MaterialTheme.colorScheme.outlineVariant)
-                                    )
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(
-                                        text = "README",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(Modifier.height(4.dp))
-                                    // 用成熟 GFM 库渲染 README（表格/任务列表/代码高亮/HTML 子集/emoji/自动链接）
-                                    // 预处理：相对链接与相对图片补全为绝对 URL（raw.githubusercontent.com）
-                                    val processed = remember(md, owner, repo, branch) {
-                                        preprocessReadme(md, owner, repo, branch)
-                                    }
-                                    // 注入自定义图片加载器（OkHttp 自研，无 Coil）
-                                    GitHubMarkdownImageTransformer.mirrorPrefix = remember {
-                                        com.yunx.app.data.prefs.SettingsRepository(context)
-                                            .githubMirrorPrefix?.ifBlank { null }
-                                    }
-                                    // 紧凑字号：与更新说明共用同一份排版（见 ui/components/MarkdownTypography.kt）
-                                    val compactTypography = remember { compactMarkdownTypography() }
-                                    Markdown(
-                                        content = processed,
-                                        modifier = Modifier.padding(bottom = 8.dp),
-                                        typography = compactTypography,
-                                        imageTransformer = GitHubMarkdownImageTransformer
-                                    )
-                                }
-                            }
-                        }
-                    } else null,
-                    fileBadge = if (viewModel.isGitHubPlatform) {
-                        { file ->
-                            val label = viewModel.githubBadges[file.fid]
-                            if (!label.isNullOrBlank()) {
-                                GitHubBadge(label)
-                            }
-                        }
-                    } else null,
-                    // 仅 GitHub 平台启用下拉刷新当前节点
-                    onRefresh = if (viewModel.isGitHubPlatform) {
-                        { viewModel.refreshGitHubCurrentNode() }
-                    } else null,
-                    refreshing = viewModel.githubRefreshing
                 )
                 is ResolveUiState.Loading -> LoadingContent()
-                // 视频解析结果：顶部返回与 Detail 一致（回到输入页，输入框内容保留）
-                is ResolveUiState.Video -> VideoResultSection(
-                    result = s.result,
-                    onDownloadMedia = { viewModel.downloadVideoMedia(it) },
-                    onDownloadAll = { viewModel.downloadAllVideoMedia() },
-                    onDownloadSelected = { viewModel.downloadVideoMedias(it) },
-                    onBack = { viewModel.backToInput() }
-                )
                 else -> ResolveInputContent(
                     viewModel = viewModel,
                     scrollBehavior = scrollBehavior,
@@ -408,14 +320,7 @@ fun ResolveScreen(
                         link = bookmark.link
                         pwd = bookmark.pwd
                         pwdEdited = true
-                        // GitHub 收藏（收藏时存的仓库链接）不走网盘解析
-                        val github = GitHubLinkParser.parse(bookmark.link)
-                        if (github != null) {
-                            viewModel.startGitHubResolve(github)
-                        } else {
-                            // 统一入口：先试视频、再试网盘（GitHub 已在上方处理）
-                            viewModel.startVideoResolve(bookmark.link, bookmark.pwd)
-                        }
+                        viewModel.startResolve(bookmark.link, bookmark.pwd)
                     },
                     onOpenBookmarks = onOpenBookmarks,
                     onRemoveShortcut = { bookmark ->
@@ -446,17 +351,11 @@ fun ResolveScreen(
         ) {
             animatedSuggestion?.let { suggestion ->
                 val shareParsed = ShareLinkParser.parse(suggestion)
-                val githubParsed = GitHubLinkParser.parse(suggestion)
-                val videoParsed = VideoLinkParser.parse(suggestion)
                 val platformName = when {
-                    videoParsed != null -> videoParsed.platform.displayName
-                    githubParsed != null -> "GitHub"
                     shareParsed != null -> shareParsed.platform.displayName
                     else -> "网盘"
                 }
                 val platformLogo = when {
-                    videoParsed != null -> videoParsed.platform.logoRes()
-                    githubParsed != null -> SharePlatform.GITHUB.logoRes()
                     shareParsed != null -> shareParsed.platform.logoRes()
                     else -> null
                 }
@@ -468,8 +367,8 @@ fun ResolveScreen(
                         pwd = shareParsed?.pwd.orEmpty()
                         pwdEdited = true
                         clipboardSuggestion = null
-                        // 统一入口：先试视频、再试 GitHub、最后网盘
-                        viewModel.startVideoResolve(suggestion, shareParsed?.pwd)
+                        // 统一网盘解析入口
+                        viewModel.startResolve(suggestion, shareParsed?.pwd)
                     },
                     onDismiss = {
                         ignoredClipboard = suggestion
@@ -583,8 +482,8 @@ private fun ResolveInputContent(
 
         Button(
             onClick = {
-                // 统一入口：先试视频、再试 GitHub / 网盘（分流在 ViewModel 内完成）
-                viewModel.startVideoResolve(link, pwd)
+                // 统一网盘解析入口
+                viewModel.startResolve(link, pwd)
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -953,66 +852,4 @@ private fun ClipboardSuggestCard(
             }
         }
     }
-}
-/**
- * GitHub 文件徽章：紧凑彩色标签。
- * 最新=绿、预发布=橙、草稿=灰、其余（Fork/语言）=中性次要色。
- */
-@Composable
-private fun GitHubBadge(label: String) {
-    val (bg, fg) = when (label) {
-        "最新" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-        "预发布" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-        "草稿" -> MaterialTheme.colorScheme.surfaceContainerHighest to MaterialTheme.colorScheme.onSurface
-        else -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-    }
-    Box(
-        modifier = Modifier
-            .background(bg, shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = fg
-        )
-    }
-}
-
-/**
- * README 预处理：把 Markdown 中的相对链接/相对图片补全为绝对 URL。
- * - [text](./x) / [text](x) → https://github.com/{owner}/{repo}/blob/{branch}/x
- * - ![alt](./img.png) / ![alt](img.png) → https://raw.githubusercontent.com/{owner}/{repo}/{branch}/img.png
- * - http(s)/mailto 开头的绝对 URL 不动。
- */
-private fun preprocessReadme(md: String, owner: String, repo: String, branch: String): String {
-    val blobBase = "https://github.com/$owner/$repo/blob/$branch/"
-    val rawBase = "https://raw.githubusercontent.com/$owner/$repo/$branch/"
-    // 图片 ![alt](url)
-    var out = Regex("!\\[([^]]*)\\]\\(([^)]+)\\)").replace(md) { m ->
-        val alt = m.groupValues[1]
-        val url = m.groupValues[2].trim()
-        val resolved = resolveRel(rawBase, url)
-        "![$alt]($resolved)"
-    }
-    // 普通链接 [text](url)（排除已处理的图片）
-    out = Regex("(?<!!)\\[([^]]+)\\]\\(([^)]+)\\)").replace(out) { m ->
-        val label = m.groupValues[1]
-        val url = m.groupValues[2].trim()
-        val resolved = resolveRel(blobBase, url)
-        "[$label]($resolved)"
-    }
-    return out
-}
-
-/**
- * 把 README 相对链接补全为绝对 URL。
- * - 绝对 URL（http/https/mailto）原样返回；
- * - 相对路径用 URI.resolve 处理 `./`、`../`（上溯目录），避免 `../` 被当作普通路径段拼错。
- */
-private fun resolveRel(base: String, rel: String): String {
-    if (rel.startsWith("http://") || rel.startsWith("https://") || rel.startsWith("mailto:")) return rel
-    // 含转义括号的链接（如 [a](b\(c\))）按原样保留，不做路径补全，避免被错误补全
-    if (rel.contains('\\')) return rel
-    return runCatching { java.net.URI(base).resolve(rel).toString() }.getOrDefault(base + rel)
 }

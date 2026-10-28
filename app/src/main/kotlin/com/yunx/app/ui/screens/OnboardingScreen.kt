@@ -308,7 +308,7 @@ private fun WelcomePage(context: Context) {
         )
         Spacer(modifier = Modifier.height(14.dp))
         Text(
-            text = "网盘与视频链接解析 · 在线预览 · 高速下载",
+            text = "网盘分享链接解析 · 在线预览 · 高速下载",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
@@ -321,7 +321,6 @@ private fun WelcomePage(context: Context) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FactChip("10 大网盘")
-            FactChip("7 大视频平台")
             FactChip("分片下载")
             FactChip("完全免费")
         }

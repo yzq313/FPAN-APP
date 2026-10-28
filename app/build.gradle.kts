@@ -53,8 +53,9 @@ android {
         // 原因与实测证据见 Agent.md §3.11，勿降回 23。
         minSdk = 24
         targetSdk = 34
-        versionCode = 15
-        versionName = "1.0"
+        // Android 升级要求 versionCode 严格递增；正式发布前核对所有已发布 APK。
+        versionCode = 16
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

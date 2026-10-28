@@ -275,9 +275,6 @@ fun SettingsScreen(
     var showConcurrencyDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
     var showRetryDialog by remember { mutableStateOf(false) }
-    // GitHub 下载镜像前缀：null/空 = 使用内置默认（UpdateChecker.MIRROR_PREFIX）
-    var githubMirror by remember { mutableStateOf(settingsRepo.githubMirrorPrefix) }
-    var showMirrorDialog by remember { mutableStateOf(false) }
     // 网络代理：本地状态驱动副标题，弹窗内使用临时变量编辑
     var proxyEnabled by remember { mutableStateOf(settingsRepo.proxyEnabled) }
     var proxyHost by remember { mutableStateOf(settingsRepo.proxyHost) }
@@ -680,19 +677,6 @@ fun SettingsScreen(
             trailing = {
                 Switch(checked = ThemeController.acceptPrereleaseUpdate, onCheckedChange = null)
             }
-        )
-
-        Spacer(modifier = Modifier.height(ListGroupGap))
-
-        // GitHub 下载镜像：自定义前缀，留空使用内置默认镜像
-        SettingsItem(
-            icon = Icons.Outlined.Cloud,
-            shape = listGroupShape(ListGroupPos.MIDDLE),
-            title = "GitHub 下载镜像",
-            description = githubMirror?.takeIf { it.isNotBlank() }
-                ?.let { "已自定义：$it" }
-                ?: "默认：${UpdateChecker.MIRROR_PREFIX}",
-            onClick = { showMirrorDialog = true }
         )
 
         Spacer(modifier = Modifier.height(ListGroupGap))
@@ -1485,63 +1469,6 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showBatteryDialog = false }) { Text("暂不") }
-            }
-        )
-    }
-
-    // GitHub 下载镜像前缀设置弹窗（留空 = 使用内置默认镜像）
-    if (showMirrorDialog) {
-        // 弹窗内临时输入：打开时带出当前已保存的自定义前缀（无则空）
-        var mirrorInput by remember { mutableStateOf(githubMirror ?: "") }
-        AlertDialog(
-            onDismissRequest = { showMirrorDialog = false },
-            title = { Text("GitHub 下载镜像") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = mirrorInput,
-                        onValueChange = { mirrorInput = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("镜像前缀 URL") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        singleLine = true
-                    )
-                    Text(
-                        text = "留空使用默认镜像 ${UpdateChecker.MIRROR_PREFIX}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    TextButton(onClick = { mirrorInput = "" }) {
-                        Text("恢复默认")
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val raw = mirrorInput.trim()
-                        if (raw.isBlank()) {
-                            // 空：恢复内置默认镜像
-                            settingsRepo.githubMirrorPrefix = null
-                            githubMirror = null
-                            showMirrorDialog = false
-                            SnackbarController.show("已恢复默认镜像")
-                        } else if (!raw.startsWith("http://") && !raw.startsWith("https://")) {
-                            // 必须是 http/https 开头，否则报错不保存
-                            SnackbarController.show("镜像前缀需以 http:// 或 https:// 开头")
-                        } else {
-                            // 规范化：统一以 / 结尾，拼接原直链时不会粘连
-                            val normalized = if (raw.endsWith("/")) raw else "$raw/"
-                            settingsRepo.githubMirrorPrefix = normalized
-                            githubMirror = normalized
-                            showMirrorDialog = false
-                            SnackbarController.show("GitHub 镜像已更新")
-                        }
-                    }
-                ) { Text("确定") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showMirrorDialog = false }) { Text("取消") }
             }
         )
     }

@@ -29,8 +29,8 @@ import org.json.JSONObject
 
 /**
  * GitHub Release 更新检测。
- * 正式版通道（默认）：GET https://api.github.com/repos/CYQawa/YunX/releases/latest
- * 预发布通道（设置页开启「接受预发布版更新」后）：GET https://api.github.com/repos/CYQawa/YunX/releases
+ * 正式版通道（默认）：GET https://api.github.com/repos/yzq313/FPAN-APP/releases/latest
+ * 预发布通道（设置页开启「接受预发布版更新」后）：GET https://api.github.com/repos/yzq313/FPAN-APP/releases
  *
  * ★ 仓库路径参数化了（[repo]）：内核包下载走的是另一个仓库（`CYQawa/yunx_gopeed_build`，
  *   见 `KernelProvisioner.KERNEL_REPO`）。Release 的抓取/解析**只此一份实现**，
@@ -39,7 +39,7 @@ import org.json.JSONObject
 object UpdateChecker {
 
     /** 本应用自己的仓库（更新检测默认走它） */
-    const val APP_REPO = "CYQawa/YunX"
+    const val APP_REPO = "yzq313/FPAN-APP"
 
     private fun latestUrl(repo: String) = "https://api.github.com/repos/$repo/releases/latest"
 
@@ -48,12 +48,6 @@ object UpdateChecker {
 
     /** 更新检测日志标签：失败原因一律 E 级打印，方便直接看 logcat 定位（断网 / 限流 / 无 Release） */
     private const val TAG = "YunX-Update"
-
-    /** GitHub 下载加速镜像站前缀（国内直连 GitHub 慢/失败时的兜底下载通道） */
-    const val MIRROR_PREFIX = "https://cdn.gh-proxy.org/"
-
-    /** 把 GitHub release 直链转成镜像站直链：<prefix><原直链>；默认使用内置镜像前缀 */
-    fun mirrorUrl(url: String, prefix: String = MIRROR_PREFIX): String = prefix + url
 
     /**
      * Release 说明里「网盘下载」条目的匹配规则，形如：

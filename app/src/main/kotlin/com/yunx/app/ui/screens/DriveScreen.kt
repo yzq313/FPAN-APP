@@ -86,10 +86,8 @@ import com.yunx.app.data.db.Pan123AccountEntity
 import com.yunx.app.data.db.QuarkAccountEntity
 import com.yunx.app.data.db.UCAccountEntity
 import com.yunx.app.data.db.XunleiAccountEntity
-import com.yunx.app.data.db.VideoAccountEntity
 import com.yunx.app.data.download.DownloadPlatform
 import com.yunx.app.data.network.model.QuotaInfo
-import com.yunx.app.data.network.video.VideoPlatform
 import com.yunx.app.ui.viewmodel.BaiduCloudViewModel
 import com.yunx.app.ui.viewmodel.C139CloudViewModel
 import com.yunx.app.ui.viewmodel.DriveQuotaViewModel
@@ -124,7 +122,6 @@ private data class DriveAccount(
 /**
  * 账号页（原「网盘」页）：
  * - 上半区「网盘账号」：夸克未登录点击进入登录页；已登录时副标题显示昵称，点击弹出账号信息底部弹窗；
- * - 下半区「视频解析」：列出全部视频平台的登录态（见 [VideoAccountSection]），需要登录的平台可登录 / 管理账号。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -178,27 +175,6 @@ fun DriveScreen(
     onGuangYaLogin: () -> Unit,
     onILanzouLogin: () -> Unit,
     onLanzouLogin: () -> Unit,
-    /** 是否已配置 GitHub Token（控制 GitHub 卡片副标题与登录态样式） */
-    githubHasToken: Boolean = false,
-    /** 点击 GitHub 卡片：已配置 Token 时进入「我的主页」（账号仓库浏览）；未配置时打开 Token 管理弹窗 */
-    onGitHubTokenClick: () -> Unit = {},
-    /** 已配置 Token 时点击卡片主体：进入当前 Token 账号的仓库列表 */
-    onGitHubBrowseHome: () -> Unit = {},
-    /** 「更多」菜单中清除 Token（二次确认后回调） */
-    onGitHubClearToken: () -> Unit = {},
-    /** 视频平台登录态（platform → 当前账号）：驱动「视频解析」区的状态与右侧按钮 */
-    videoLoginState: Map<VideoPlatform, VideoAccountEntity> = emptyMap(),
-    /** 全部平台的视频账号：用于「共 N 个账号」统计与账号弹窗列表 */
-    videoAccounts: List<VideoAccountEntity> = emptyList(),
-    /** 需要登录的视频平台点「登录」：上层打开该平台的登录页（普通登录，覆盖当前账号） */
-    onVideoLogin: (VideoPlatform) -> Unit = {},
-    /** 视频账号弹窗「添加账号」：上层打开登录页并让它落成新的一行 */
-    onVideoAddAccount: (VideoPlatform) -> Unit = {},
-    /** 视频账号弹窗操作：设为主账号 / 改备注 / 退出该账号 / 退出该平台全部账号 */
-    onVideoSetPrimary: (VideoPlatform, String) -> Unit = { _, _ -> },
-    onVideoRename: (String, String) -> Unit = { _, _ -> },
-    onVideoRemove: (String) -> Unit = {},
-    onVideoRemoveAll: (VideoPlatform) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showQuarkSheet by remember { mutableStateOf(false) }
@@ -211,10 +187,6 @@ fun DriveScreen(
     var showGuangYaSheet by remember { mutableStateOf(false) }
     var showILanzouSheet by remember { mutableStateOf(false) }
     var showLanzouSheet by remember { mutableStateOf(false) }
-    // GitHub 卡片「更多」菜单（浏览主页 / 配置 Token / 清除 Token）
-    var showGitHubSheet by remember { mutableStateOf(false) }
-    // 视频平台账号弹窗：需要登录且已登录的平台点「管理」时记录平台（null = 不展示）
-    var showVideoSheet by remember { mutableStateOf<VideoPlatform?>(null) }
     // 夸克云盘浏览：网盘 Tab 内切换（非全屏），切 Tab 再回来仍保留
     var showCloud by rememberSaveable { mutableStateOf(false) }
     // UC 网盘云盘浏览：网盘 Tab 内切换（非全屏）
@@ -306,14 +278,6 @@ fun DriveScreen(
         description = lanzouAccount?.nickname?.let { maskAccount(it) } ?: "点击登录，支持解析下载",
         avatarText = "蓝",
         isLoggedIn = lanzouAccount != null
-    )
-    // GitHub：把 GitHub 当网盘浏览下载；此处仅做 Token 管理（提升 API 限额），浏览入口在解析页
-    val github = DriveAccount(
-        id = "github",
-        name = "GitHub",
-        description = if (githubHasToken) "已配置 Token" else "点击配置 Token",
-        avatarText = "GH",
-        isLoggedIn = githubHasToken
     )
     val others = remember {
         emptyList<DriveAccount>()
@@ -431,7 +395,7 @@ fun DriveScreen(
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
-                // 只对网盘分组；GitHub 和视频账号保留原来的位置和行为。
+                // 网盘按登录状态分组。
                 val drives = listOf(quark, uc, xunlei, baidu, c139, pan123, pan115, guangya, ilanzou, lanzou)
                 val hasLoggedIn = drives.any { it.isLoggedIn }
                 for (loggedIn in listOf(true, false)) {
@@ -599,28 +563,8 @@ fun DriveScreen(
                     )
                 }
                 }
-                item(key = github.id) {
-                    // GitHub：已配置 Token 点击主体进入「我的主页」；未配置打开 Token 弹窗；更多按钮在登录后显示
-                    DriveAccountCard(
-                        account = github,
-                        onClick = if (githubHasToken) onGitHubBrowseHome else onGitHubTokenClick,
-                        onMoreClick = if (githubHasToken) { { showGitHubSheet = true } } else null
-                    )
-                }
                 items(others, key = { it.id }) { account ->
                     DriveAccountCard(account = account)
-                }
-                // 视频解析：平台列表与登录态全部由 VideoAccountSection 自己呈现，这里只透传数据与回调
-                item(key = "video_section_label") {
-                    AccountSectionLabel("视频解析")
-                }
-                item(key = "video_section") {
-                    VideoAccountSection(
-                        loginState = videoLoginState,
-                        accounts = videoAccounts,
-                        onLogin = onVideoLogin,
-                        onManage = { showVideoSheet = it }
-                    )
                 }
             }
             }
@@ -767,66 +711,7 @@ fun DriveScreen(
         )
     }
 
-    // 视频平台账号弹窗：需要登录且已登录的平台点「管理」打开
-    showVideoSheet?.let { platform ->
-        VideoAccountSheet(
-            platform = platform,
-            accounts = videoAccounts.filter { it.platform == platform.name },
-            onSetPrimary = { onVideoSetPrimary(platform, it) },
-            onRename = onVideoRename,
-            onRemove = onVideoRemove,
-            onRemoveAll = { onVideoRemoveAll(platform) },
-            onAddAccount = { onVideoAddAccount(platform) },
-            onDismiss = { showVideoSheet = null }
-        )
-    }
 
-    // GitHub 卡片「更多」菜单：浏览我的主页 / 配置 Token / 清除 Token（清除由上层做二次确认）
-    if (showGitHubSheet) {
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(
-            onDismissRequest = { showGitHubSheet = false },
-            sheetState = sheetState
-        ) {
-            Column(modifier = Modifier.padding(bottom = 24.dp)) {
-                Text(
-                    text = "GitHub",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-                )
-                // 浏览我的主页
-                TextButton(
-                    onClick = {
-                        showGitHubSheet = false
-                        onGitHubBrowseHome()
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) { Text("浏览我的主页", modifier = Modifier.fillMaxWidth()) }
-                // 配置 Token
-                TextButton(
-                    onClick = {
-                        showGitHubSheet = false
-                        onGitHubTokenClick()
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) { Text("配置 Token", modifier = Modifier.fillMaxWidth()) }
-                // 清除 Token
-                TextButton(
-                    onClick = {
-                        showGitHubSheet = false
-                        onGitHubClearToken()
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) {
-                    Text(
-                        "清除 Token",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable

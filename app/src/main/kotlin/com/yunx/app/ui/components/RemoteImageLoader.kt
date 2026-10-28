@@ -40,7 +40,6 @@ import java.util.Collections
  * - 内存 LRU 缓存（[MAX_ENTRIES] 张）防重复请求，[cached] 让「已经加载过的图」在重组时立即出图、不闪占位；
  * - [Semaphore] 限制同时在飞的请求数，滚动长列表时不会瞬间打满连接；
  * - 降采样：先读尺寸按目标宽算 inSampleSize，避免大图撑爆内存；
- * - 镜像：显式设置 [mirrorPrefix] 时先试镜像 URL，失败回退直连（仅 GitHub 系域名生效）；
  * - SVG 直接跳过（BitmapFactory 不支持，README badge 大量是 svg），任何异常返回 null 由调用方显示占位。
  */
 object RemoteImageLoader {
@@ -56,10 +55,6 @@ object RemoteImageLoader {
 
     private val semaphore = Semaphore(4)
 
-    /** 镜像前缀（由调用方在读取设置后设置；null / 空 = 直连）。只对 GitHub 系域名生效 */
-    @Volatile
-    var mirrorPrefix: String? = null
-
     /** 取已缓存的图（没有则 null）：调用方用它做首帧直出，避免闪一下占位色 */
     fun cached(url: String): Bitmap? = cache[url.trim()]
 
@@ -73,14 +68,8 @@ object RemoteImageLoader {
             // 带 query 的 svg（如 badge.svg?raw=1）必须先去 query/fragment 再取后缀，否则会误取成 "raw=1"
             val ext = link.substringBefore('?').substringBefore('#').substringAfterLast('.').lowercase()
             if (ext == "svg") return@withContext null
-            // 镜像前缀仅对 GitHub 域生效；外链图（图床 / imgur 等）直接直连，避免无谓的失败镜像请求
-            val useMirror = !mirrorPrefix.isNullOrBlank() && isGitHubDomain(link)
-            val candidates = buildList {
-                if (useMirror) add(UpdateChecker.mirrorUrl(link, mirrorPrefix!!))
-                add(link)
-            }
             val client = HttpClients.downloadClient()
-            for (candidate in candidates) {
+            for (candidate in listOf(link)) {
                 val bytes: ByteArray? = runCatching {
                     semaphore.withPermit {
                         val req = okhttp3.Request.Builder().url(candidate)
@@ -101,13 +90,6 @@ object RemoteImageLoader {
             }
             null
         }
-    }
-
-    /** 是否为 GitHub 系域名（仅这些域套镜像前缀才有意义）；严格匹配防止 evilgithub.com 等仿冒域被误套 */
-    private fun isGitHubDomain(url: String): Boolean {
-        val host = runCatching { java.net.URI(url).host }.getOrNull()?.lowercase() ?: return false
-        return host == "github.com" || host.endsWith(".github.com") ||
-            host == "raw.githubusercontent.com" || host.endsWith(".githubusercontent.com")
     }
 
     /**

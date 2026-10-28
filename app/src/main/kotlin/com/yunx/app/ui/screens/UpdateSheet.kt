@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.dp
 import com.yunx.app.data.update.UpdateChecker
 
 /** Release 说明里没给 html_url 时的兜底跳转地址 */
-private const val RELEASES_PAGE_FALLBACK = "https://github.com/CYQawa/YunX/releases/latest"
+private const val RELEASES_PAGE_FALLBACK = "https://github.com/yzq313/FPAN-APP/releases/latest"
 
 /**
  * 发现新版本的**底部弹窗**。
@@ -84,8 +84,6 @@ fun UpdateSheet(
     release: UpdateChecker.Release,
     /** GitHub 直链下载（内置下载器） */
     onDownload: () -> Unit,
-    /** 镜像站（加速通道）下载 */
-    onDownloadMirror: () -> Unit,
     /** 网盘更新：把说明里匹配到的网盘链接交给解析流程 */
     onNetdiskUpdate: (url: String) -> Unit,
     onLater: () -> Unit,
@@ -243,21 +241,6 @@ fun UpdateSheet(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("GitHub 下载")
                 }
-            } else {
-                OutlinedButton(
-                    onClick = onDownloadMirror,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Cloud,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("使用镜像站下载")
-                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -300,22 +283,6 @@ fun UpdateSheet(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("GitHub 直连下载")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = {
-                            showGithubOptions = false
-                            onDownloadMirror()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Cloud,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("镜像站加速下载")
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
