@@ -30,6 +30,8 @@ import com.yunx.app.data.security.CredentialCipher
 import com.yunx.app.data.security.PlaintextCredentialCipher
 import com.yunx.app.data.network.HttpClients
 import dev.turbodl.core.DownloadRequest
+import dev.turbodl.core.ProxyMode
+import dev.turbodl.core.ProxyType
 import dev.turbodl.core.TaskState
 import dev.turbodl.core.TurboConfig
 import dev.turbodl.plugin.bootstrap.TurboBootstrap
@@ -1963,6 +1965,10 @@ class DownloadManager(
                 maxConnectionsPerTask = threadProvider(task.platform).coerceIn(1, 256),
                 maxConcurrentTasks = 1,
                 globalSpeedLimitBytesPerSec = speedLimitProvider().coerceAtLeast(0),
+                proxy = if (settings.proxyEnabled && settings.proxyHost.isNotBlank()) {
+                    ProxyMode.Manual(ProxyType.HTTP, settings.proxyHost, settings.proxyPort)
+                } else ProxyMode.Direct,
+                trustAllCerts = settings.ignoreSslCert,
             ),
             extraPlugins = listOf(HlsPlugin()),
         )
