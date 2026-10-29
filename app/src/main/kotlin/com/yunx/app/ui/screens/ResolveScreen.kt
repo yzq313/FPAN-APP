@@ -100,6 +100,7 @@ import com.yunx.app.data.db.BookmarkEntity
 import com.yunx.app.data.network.GitHubLinkParser
 import com.yunx.app.data.network.ShareLinkParser
 import com.yunx.app.data.network.SharePlatform
+import com.yunx.app.data.update.UpdateChecker
 import com.yunx.app.ui.SnackbarController
 import com.mikepenz.markdown.m3.Markdown
 import com.yunx.app.ui.components.FileNameText
