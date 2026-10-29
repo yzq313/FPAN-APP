@@ -32,7 +32,7 @@ data class BookmarkEntity(
     val link: String,
     /** 分享标题（解析后回填；手动添加可为空，展示时回退为链接） */
     val title: String = "",
-    /** 平台枚举名（QUARK/UC/XUNLEI/BAIDU/C139/PAN123），未知为空串 */
+    /** 平台枚举名（QUARK/UC/XUNLEI/BAIDU/PAN123），未知为空串 */
     val platform: String = "",
     /** 提取码（可选） */
     val pwd: String = "",

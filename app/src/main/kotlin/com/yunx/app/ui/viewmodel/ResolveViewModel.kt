@@ -32,8 +32,6 @@ import com.yunx.app.data.download.DownloadPathPolicy
 import com.yunx.app.data.download.DownloadPlatform
 import com.yunx.app.data.download.DownloadSource
 import com.yunx.app.data.network.BaiduConstants
-import com.yunx.app.data.network.C139Constants
-import com.yunx.app.data.network.GuangYaConstants
 import com.yunx.app.data.network.ILanzouConstants
 import com.yunx.app.data.network.LanzouConstants
 import com.yunx.app.data.network.GitHubApi
@@ -59,10 +57,6 @@ import com.yunx.app.data.network.model.ShareSession
 import com.yunx.app.data.update.UpdateChecker
 import com.yunx.app.data.repository.BaiduAccountRepository
 import com.yunx.app.data.repository.BaiduResolveRepository
-import com.yunx.app.data.repository.C139AccountRepository
-import com.yunx.app.data.repository.C139ResolveRepository
-import com.yunx.app.data.repository.GuangYaAccountRepository
-import com.yunx.app.data.repository.GuangYaResolveRepository
 import com.yunx.app.data.repository.LanzouAccountRepository
 import com.yunx.app.data.repository.ILanzouAccountRepository
 import com.yunx.app.data.repository.ILanzouResolveRepository
@@ -101,7 +95,7 @@ sealed interface ResolveUiState {
 
 /**
  * 解析页 ViewModel：分享解析状态机 + 目录导航 + 下载直链。
- * 支持夸克 / UC / 迅雷 / 百度 / 139 / 123 / 115，按链接自动路由到对应平台仓库与凭证。
+ * 支持夸克 / UC / 迅雷 / 百度 / 123 / 115，按链接自动路由到对应平台仓库与凭证。
  */
 class ResolveViewModel(
     private val accountRepository: QuarkAccountRepository,
@@ -112,14 +106,10 @@ class ResolveViewModel(
     private val xunleiResolveRepository: XunleiResolveRepository,
     private val baiduAccountRepository: BaiduAccountRepository,
     private val baiduResolveRepository: BaiduResolveRepository,
-    private val c139AccountRepository: C139AccountRepository,
-    private val c139ResolveRepository: C139ResolveRepository,
     private val pan123AccountRepository: Pan123AccountRepository,
     private val pan123ResolveRepository: Pan123ResolveRepository,
     private val pan115AccountRepository: Pan115AccountRepository,
     private val pan115ResolveRepository: Pan115ResolveRepository,
-    private val guangyaAccountRepository: GuangYaAccountRepository,
-    private val guangyaResolveRepository: GuangYaResolveRepository,
     private val ilanzouAccountRepository: ILanzouAccountRepository,
     private val ilanzouResolveRepository: ILanzouResolveRepository,
     private val lanzouAccountRepository: LanzouAccountRepository,
@@ -155,7 +145,7 @@ class ResolveViewModel(
 
     /**
      * 游客模式：本次解析没有携带任何登录凭据（列目录可用，下载/转存需登录）。
-     * 7 个网盘的分享**列表**接口都允许匿名（123/139/百度/夸克/UC/115 直接匿名；迅雷走不带
+     * 多数网盘的分享**列表**接口都允许匿名（123/百度/夸克/UC/115 直接匿名；迅雷走不带
      * Authorization 的分享接口），因此解析不再要求登录；下载/转存仍在各自入口要求登录。
      * 详见 Agent.md §3.19。
      */
@@ -191,16 +181,14 @@ class ResolveViewModel(
     var saveMessage by mutableStateOf<String?>(null)
         private set
 
-    /** 当前分享是否支持转存（夸克 / UC / 迅雷 / 百度 / 139 / 123 / 115 / 光鸭） */
+    /** 当前分享是否支持转存（夸克 / UC / 迅雷 / 百度 / 123 / 115） */
     val canSave: Boolean
         get() = currentPlatform == SharePlatform.QUARK ||
             currentPlatform == SharePlatform.UC ||
             currentPlatform == SharePlatform.XUNLEI ||
             currentPlatform == SharePlatform.BAIDU ||
-            currentPlatform == SharePlatform.C139 ||
             currentPlatform == SharePlatform.PAN123 ||
-            currentPlatform == SharePlatform.PAN115 ||
-            currentPlatform == SharePlatform.GUANGYA
+            currentPlatform == SharePlatform.PAN115
 
     /** 当前分享是否为迅雷（UI 选择迅雷版转存目录选择器） */
     val isSaveXunlei: Boolean
@@ -214,10 +202,6 @@ class ResolveViewModel(
     val isBaidu: Boolean
         get() = currentPlatform == SharePlatform.BAIDU
 
-    /** 当前分享是否为 139（UI 选择 139 版转存目录选择器） */
-    val isSaveC139: Boolean
-        get() = currentPlatform == SharePlatform.C139
-
     /** 当前分享是否为 UC（UI 选择 UC 版转存目录选择器） */
     val isSaveUC: Boolean
         get() = currentPlatform == SharePlatform.UC
@@ -229,10 +213,6 @@ class ResolveViewModel(
     /** 当前分享是否为 115（UI 选择 115 版转存目录选择器） */
     val isSavePan115: Boolean
         get() = currentPlatform == SharePlatform.PAN115
-
-    /** 当前分享是否为光鸭云盘（UI 选择光鸭版转存目录选择器） */
-    val isSaveGuangYa: Boolean
-        get() = currentPlatform == SharePlatform.GUANGYA
 
     /** 请求转存：记录目标文件并打开目录选择弹窗 */
     fun requestSave(file: ShareFile) {
@@ -292,21 +272,6 @@ class ResolveViewModel(
                                 saveMessage = it.message ?: "转存失败"
                             }
                     }
-                    SharePlatform.C139 -> {
-                        val credential = currentCredential()
-                        if (credential.isNullOrBlank()) {
-                            saveMessage = "请先登录139网盘"
-                            return@launch
-                        }
-                        c139ResolveRepository.transferFile(s, file, toDirFid, credential)
-                            .onSuccess {
-                                saveMessage = "已保存到139网盘"
-                                saveTarget = null
-                            }
-                            .onFailure {
-                                saveMessage = it.message ?: "转存失败"
-                            }
-                    }
                     SharePlatform.UC -> {
                         val credential = currentCredential()
                         if (credential.isNullOrBlank()) {
@@ -348,22 +313,6 @@ class ResolveViewModel(
                         pan115ResolveRepository.transferFile(s, file, toDirFid, credential)
                             .onSuccess {
                                 saveMessage = "已保存到115网盘"
-                                saveTarget = null
-                            }
-                            .onFailure {
-                                saveMessage = it.message ?: "转存失败"
-                            }
-                    }
-                    SharePlatform.GUANGYA -> {
-                        // 光鸭保存到个人盘：restore_share（accessToken + fileIds + parentId）
-                        val credential = currentCredential()
-                        if (credential.isNullOrBlank()) {
-                            saveMessage = "请先登录光鸭云盘"
-                            return@launch
-                        }
-                        guangyaResolveRepository.transferFile(s, file, toDirFid, credential)
-                            .onSuccess {
-                                saveMessage = "已保存到光鸭云盘"
                                 saveTarget = null
                             }
                             .onFailure {
@@ -480,10 +429,6 @@ class ResolveViewModel(
                                 // 百度批量转存到根目录（绝对路径 "/"）
                                 baiduResolveRepository.transferFile(s, file, "/", credential)
                             }
-                            SharePlatform.C139 -> {
-                                // 139 批量转存到根目录（fileId "/"）
-                                c139ResolveRepository.transferFile(s, file, "/", credential)
-                            }
                             SharePlatform.UC -> {
                                 // UC 批量转存到根目录（pdir_fid "0"）
                                 ucResolveRepository.transferFile(s, file, UCConstants.DEFAULT_PDIR_FID, credential)
@@ -495,10 +440,6 @@ class ResolveViewModel(
                             SharePlatform.PAN115 -> {
                                 // 115 批量转存到根目录（cid "0"）
                                 pan115ResolveRepository.transferFile(s, file, Pan115Constants.ROOT_CID, credential)
-                            }
-                            SharePlatform.GUANGYA -> {
-                                // 光鸭批量转存到根目录（parentId ""）
-                                guangyaResolveRepository.transferFile(s, file, "", credential)
                             }
                             SharePlatform.ILANZOU -> {
                                 // 蓝奏优享批量转存到根目录（folderId "0"）
@@ -891,15 +832,13 @@ class ResolveViewModel(
     /** README 渲染用：默认分支（用于相对链接补全） */
     val githubDefaultBranch: String? get() = currentGitHubRepo?.defaultBranch
 
-    /** 当前平台凭证（夸克/UC/百度/139/115 用 cookie，迅雷/123 用 access_token；GitHub 无需凭证） */
+    /** 当前平台凭证（夸克/UC/百度/115 用 cookie，迅雷/123 用 access_token；GitHub 无需凭证） */
     private suspend fun currentCredential(): String? = when (currentPlatform) {
         SharePlatform.UC -> ucAccountRepository.getAccount()?.cookie
         SharePlatform.XUNLEI -> xunleiAccountRepository.getAccount()?.accessToken
         SharePlatform.BAIDU -> baiduAccountRepository.getAccount()?.cookie
-        SharePlatform.C139 -> c139AccountRepository.getAccount()?.cookie
         SharePlatform.PAN123 -> pan123AccountRepository.getAccount()?.accessToken
         SharePlatform.PAN115 -> pan115AccountRepository.getAccount()?.cookie
-        SharePlatform.GUANGYA -> guangyaAccountRepository.ensureAccessToken()
         SharePlatform.ILANZOU -> ilanzouAccountRepository.getAccount()?.appToken
         SharePlatform.LANZOU -> lanzouAccountRepository.getAccount()?.cookie
         SharePlatform.GITHUB -> null
@@ -909,8 +848,8 @@ class ResolveViewModel(
     /**
      * 多账号下载（实验性 C1）：本次批量下载可以轮换使用的凭证列表（主账号在前）。
      *
-     * ★ 只覆盖「取链接口按参数收凭证」的平台：夸克 / UC / 迅雷 / 百度 / 139 / 115 / 蓝奏云。
-     *   123 / 光鸭 / 蓝奏优享 的凭证由各自 ResolveRepository 内部的 provider 闭包绑定主账号
+     * ★ 只覆盖「取链接口按参数收凭证」的平台：夸克 / UC / 迅雷 / 百度 / 115 / 蓝奏云。
+     *   123 / 蓝奏优享 的凭证由各自 ResolveRepository 内部的 provider 闭包绑定主账号
      *   （那条链路还负责 token 过期自动刷新），要换账号得改整条 provider 接线，
      *   本次不做 —— 它们退回单账号，行为与开启前一致。
      *
@@ -923,7 +862,6 @@ class ResolveViewModel(
             SharePlatform.UC -> ucAccountRepository.allCredentials()
             SharePlatform.XUNLEI -> xunleiAccountRepository.allCredentials()
             SharePlatform.BAIDU -> baiduAccountRepository.allCredentials()
-            SharePlatform.C139 -> c139AccountRepository.allCredentials()
             SharePlatform.PAN115 -> pan115AccountRepository.allCredentials()
             SharePlatform.LANZOU -> lanzouAccountRepository.allCredentials()
             else -> emptyList()
@@ -933,7 +871,7 @@ class ResolveViewModel(
 
     /**
      * 单文件多源分片（实验性 C2）支持轮换的四个主流平台（用户指定）。
-     * 其余平台即使开着 C2 也退回单源：它们的取链要么走 provider 闭包（123/光鸭/蓝奏优享），
+     * 其余平台即使开着 C2 也退回单源：它们的取链要么走 provider 闭包（123/蓝奏优享），
      * 要么没有独立的账号维度可用。
      */
     private val multiSourcePlatforms = setOf(
@@ -969,10 +907,8 @@ class ResolveViewModel(
         SharePlatform.UC -> ucResolveRepository
         SharePlatform.XUNLEI -> xunleiResolveRepository
         SharePlatform.BAIDU -> baiduResolveRepository
-        SharePlatform.C139 -> c139ResolveRepository
         SharePlatform.PAN123 -> pan123ResolveRepository
         SharePlatform.PAN115 -> pan115ResolveRepository
-        SharePlatform.GUANGYA -> guangyaResolveRepository
         SharePlatform.ILANZOU -> ilanzouResolveRepository
         SharePlatform.LANZOU -> lanzouResolveRepository
         else -> resolveRepository
@@ -982,10 +918,8 @@ class ResolveViewModel(
         SharePlatform.UC -> UCConstants.DEFAULT_PDIR_FID
         SharePlatform.XUNLEI -> "0"
         SharePlatform.BAIDU -> ""
-        SharePlatform.C139 -> "0"
         SharePlatform.PAN123 -> "0"
         SharePlatform.PAN115 -> Pan115Constants.ROOT_CID
-        SharePlatform.GUANGYA -> ""
         SharePlatform.ILANZOU -> ""
         SharePlatform.LANZOU -> ""
         SharePlatform.GITHUB -> "github:root"
@@ -996,10 +930,8 @@ class ResolveViewModel(
         SharePlatform.UC -> "UC 网盘"
         SharePlatform.XUNLEI -> "迅雷网盘"
         SharePlatform.BAIDU -> "百度网盘"
-        SharePlatform.C139 -> "139 网盘"
         SharePlatform.PAN123 -> "123云盘"
         SharePlatform.PAN115 -> "115网盘"
-        SharePlatform.GUANGYA -> "光鸭云盘"
         SharePlatform.ILANZOU -> "蓝奏云优享版"
         SharePlatform.LANZOU -> "蓝奏云"
         SharePlatform.GITHUB -> "GitHub"
@@ -1689,14 +1621,12 @@ class ResolveViewModel(
     /**
      * 平台是否支持「未登录下载」：
      * - 夸克/UC：分享直链不要求登录态（夸克仅约 50MB 以内，且直链要带游客态 __pugs）；
-     * - 光鸭：分享列目录与取链本身匿名可用（受限分享返回 207 时会提示登录转存）；
      * - 蓝奏云：分享解析与取链完全匿名。
      * 其余平台仍要求登录。
      */
     private fun supportsGuestDownload(): Boolean =
         currentPlatform == SharePlatform.QUARK ||
             currentPlatform == SharePlatform.UC ||
-            currentPlatform == SharePlatform.GUANGYA ||
             currentPlatform == SharePlatform.ILANZOU ||
             currentPlatform == SharePlatform.LANZOU
 
@@ -1839,7 +1769,7 @@ class ResolveViewModel(
                 val link: DownloadLink
                 val effectiveCredential: String
                 if (credential.isBlank()) {
-                    // 游客态：与 fetchDownloadLink 一致，仅夸克/UC/光鸭/蓝奏支持匿名取链，其余平台必须登录
+                    // 游客态：与 fetchDownloadLink 一致，仅夸克/UC/蓝奏支持匿名取链，其余平台必须登录
                     if (!supportsGuestDownload()) {
                         downloadError = "下载需要先登录${platformName()}（未登录仅能浏览文件列表）"
                         return@launch
@@ -1931,7 +1861,7 @@ class ResolveViewModel(
         guestCookie: String
     ): Map<String, String> {
         val isGuestLink = guestCookie.isNotBlank()
-        // 迅雷直链 URL 自带签名，无需 Cookie；夸克/UC/百度需 Cookie + UA；139 直链为 CDN 签名地址；123 直链需 Referer
+        // 迅雷直链 URL 自带签名，无需 Cookie；夸克/UC/百度需 Cookie + UA；123 直链需 Referer
         // 115 直链需「登录 Cookie + 取链响应下发的 900 秒 CDN Cookie」双 Cookie（缺一即 CDN 403 no cookie value）
         return when (platform) {
             SharePlatform.XUNLEI -> mapOf("User-Agent" to XunleiConstants.APP_UA) // 迅雷直链必须用官方 app UA，浏览器 UA 会触发 CDN 降级（200整文件）
@@ -1939,7 +1869,6 @@ class ResolveViewModel(
                 "Cookie" to credential,
                 "User-Agent" to BaiduConstants.UA_NETDISK
             )
-            SharePlatform.C139 -> mapOf("User-Agent" to C139Constants.PC_UA)
             // 115：CDN 同时校验登录 Cookie 与取链响应下发的 900 秒 CDN Cookie，
             // 缺任一直接 403 no cookie value（文档 §4.3），因此两份 Cookie 拼接后一起发；
             // UA 必须是客户端串（与取链一致），浏览器 UA 会被判「网页端」拒发大文件直链（抓包 bug/115/）
@@ -1952,11 +1881,6 @@ class ResolveViewModel(
             SharePlatform.PAN123 -> mapOf(
                 "User-Agent" to Pan123Constants.WEB_UA,
                 "Referer" to Pan123Constants.DOWNLOAD_REFERER
-            )
-            // 光鸭直链为签名 CDN 地址，下载带 UA + Referer，且不携带 Authorization/Cookie（文档 §5.6/§7.1）
-            SharePlatform.GUANGYA -> mapOf(
-                "User-Agent" to GuangYaConstants.WEB_UA,
-                "Referer" to GuangYaConstants.DOWNLOAD_REFERER
             )
             // 蓝奏优享直链为 CDN 地址，下载带 UA + Referer + Origin，不带 Cookie（文档 §4.1）
             SharePlatform.ILANZOU -> mapOf(
@@ -2019,10 +1943,8 @@ class ResolveViewModel(
         val isUC = currentPlatform == SharePlatform.UC
         val isXunlei = currentPlatform == SharePlatform.XUNLEI
         val isBaidu = currentPlatform == SharePlatform.BAIDU
-        val isC139 = currentPlatform == SharePlatform.C139
         val isPan123 = currentPlatform == SharePlatform.PAN123
         val isPan115 = currentPlatform == SharePlatform.PAN115
-        val isGuangYa = currentPlatform == SharePlatform.GUANGYA
         val isILanzou = currentPlatform == SharePlatform.ILANZOU
         val isLanzou = currentPlatform == SharePlatform.LANZOU
         val isQuark = currentPlatform == SharePlatform.QUARK
@@ -2031,10 +1953,8 @@ class ResolveViewModel(
             isXunlei -> DownloadPlatform.XUNLEI
             isUC -> DownloadPlatform.UC
             isBaidu -> DownloadPlatform.BAIDU
-            isC139 -> DownloadPlatform.C139
             isPan123 -> DownloadPlatform.PAN123
             isPan115 -> DownloadPlatform.PAN115
-            isGuangYa -> DownloadPlatform.GUANGYA
             isILanzou -> DownloadPlatform.ILANZOU
             isLanzou -> DownloadPlatform.LANZOU
             else -> DownloadPlatform.QUARK
@@ -2147,14 +2067,10 @@ class ResolveViewModel(
         private val xunleiResolveRepository: XunleiResolveRepository,
         private val baiduAccountRepository: BaiduAccountRepository,
         private val baiduResolveRepository: BaiduResolveRepository,
-        private val c139AccountRepository: C139AccountRepository,
-        private val c139ResolveRepository: C139ResolveRepository,
         private val pan123AccountRepository: Pan123AccountRepository,
         private val pan123ResolveRepository: Pan123ResolveRepository,
         private val pan115AccountRepository: Pan115AccountRepository,
         private val pan115ResolveRepository: Pan115ResolveRepository,
-        private val guangyaAccountRepository: GuangYaAccountRepository,
-        private val guangyaResolveRepository: GuangYaResolveRepository,
         private val ilanzouAccountRepository: ILanzouAccountRepository,
         private val ilanzouResolveRepository: ILanzouResolveRepository,
         private val lanzouAccountRepository: LanzouAccountRepository,
@@ -2175,10 +2091,8 @@ class ResolveViewModel(
                 ucAccountRepository, ucResolveRepository,
                 xunleiAccountRepository, xunleiResolveRepository,
                 baiduAccountRepository, baiduResolveRepository,
-                c139AccountRepository, c139ResolveRepository,
                 pan123AccountRepository, pan123ResolveRepository,
                 pan115AccountRepository, pan115ResolveRepository,
-                guangyaAccountRepository, guangyaResolveRepository,
                 ilanzouAccountRepository, ilanzouResolveRepository,
                 lanzouAccountRepository, lanzouResolveRepository,
                 downloadManager,

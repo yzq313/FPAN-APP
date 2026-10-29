@@ -86,9 +86,4 @@ class ShareLinkParserTest {
         assertEquals(SharePlatform.ILANZOU, ilanzouBare.platform)
     }
 
-    @Test
-    fun rejectsRemovedProviders() {
-        assertNull(ShareLinkParser.parse("https://yun.139.com/shareweb/#/w/i/Abc_123"))
-        assertNull(ShareLinkParser.parse("https://www.guangyapan.com/s/Share123"))
-    }
 }

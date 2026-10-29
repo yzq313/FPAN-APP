@@ -111,29 +111,6 @@ internal object SecureAccountDaos {
         override suspend fun clear() = raw.clear()
     }
 
-    fun c139(raw: C139AccountDao, cipher: CredentialCipher): C139AccountDao = object : C139AccountDao {
-        override fun observeAccount(): Flow<C139AccountEntity?> = raw.observeAccount().map { value ->
-            // 单条失败只让这次 emit 为 null，**不能让 Flow 终止**（见 decryptOrNull）
-            value?.let { decryptOrNull { decryptC139(raw, cipher, it) } }
-        }.catch { emit(null) }
-        override suspend fun upsert(account: C139AccountEntity) = raw.upsert(account)
-        override suspend fun getAccount(): C139AccountEntity? = decryptOrNull {
-            raw.getAccount()?.let { decryptC139(raw, cipher, it) }
-        }
-        override fun observeAccounts(): Flow<List<C139AccountEntity>> = raw.observeAccounts().map { list ->
-            // 逐条兜住：坏的这一条跳过，同平台其他账号照常显示，也不能让 Flow 终止（见 decryptOrNull）
-            list.mapNotNull { decryptOrNull { decryptC139(raw, cipher, it) } }
-        }.catch { emit(emptyList()) }
-        override suspend fun getAccounts(): List<C139AccountEntity> = decryptOrNull {
-            // ★ 逐行兜住：多账号下某一条读不出来只跳过那一条，不能把同平台其他账号一起丢掉
-            raw.getAccounts().mapNotNull { decryptOrNull { decryptC139(raw, cipher, it) } }
-        } ?: emptyList()
-        override suspend fun setPrimary(id: String) = raw.setPrimary(id)
-        override suspend fun updateRemark(id: String, remark: String) = raw.updateRemark(id, remark)
-        override suspend fun deleteById(id: String) = raw.deleteById(id)
-        override suspend fun clear() = raw.clear()
-    }
-
     fun pan123(raw: Pan123AccountDao, cipher: CredentialCipher): Pan123AccountDao = object : Pan123AccountDao {
         override fun observeAccount(): Flow<Pan123AccountEntity?> = raw.observeAccount().map { value ->
             // 单条失败只让这次 emit 为 null，**不能让 Flow 终止**（见 decryptOrNull）
@@ -173,29 +150,6 @@ internal object SecureAccountDaos {
         override suspend fun getAccounts(): List<Pan115AccountEntity> = decryptOrNull {
             // ★ 逐行兜住：多账号下某一条读不出来只跳过那一条，不能把同平台其他账号一起丢掉
             raw.getAccounts().mapNotNull { decryptOrNull { decryptPan115(raw, cipher, it) } }
-        } ?: emptyList()
-        override suspend fun setPrimary(id: String) = raw.setPrimary(id)
-        override suspend fun updateRemark(id: String, remark: String) = raw.updateRemark(id, remark)
-        override suspend fun deleteById(id: String) = raw.deleteById(id)
-        override suspend fun clear() = raw.clear()
-    }
-
-    fun guangya(raw: GuangYaAccountDao, cipher: CredentialCipher): GuangYaAccountDao = object : GuangYaAccountDao {
-        override fun observeAccount(): Flow<GuangYaAccountEntity?> = raw.observeAccount().map { value ->
-            // 单条失败只让这次 emit 为 null，**不能让 Flow 终止**（见 decryptOrNull）
-            value?.let { decryptOrNull { decryptGuangYa(raw, cipher, it) } }
-        }.catch { emit(null) }
-        override suspend fun upsert(account: GuangYaAccountEntity) = raw.upsert(account)
-        override suspend fun getAccount(): GuangYaAccountEntity? = decryptOrNull {
-            raw.getAccount()?.let { decryptGuangYa(raw, cipher, it) }
-        }
-        override fun observeAccounts(): Flow<List<GuangYaAccountEntity>> = raw.observeAccounts().map { list ->
-            // 逐条兜住：坏的这一条跳过，同平台其他账号照常显示，也不能让 Flow 终止（见 decryptOrNull）
-            list.mapNotNull { decryptOrNull { decryptGuangYa(raw, cipher, it) } }
-        }.catch { emit(emptyList()) }
-        override suspend fun getAccounts(): List<GuangYaAccountEntity> = decryptOrNull {
-            // ★ 逐行兜住：多账号下某一条读不出来只跳过那一条，不能把同平台其他账号一起丢掉
-            raw.getAccounts().mapNotNull { decryptOrNull { decryptGuangYa(raw, cipher, it) } }
         } ?: emptyList()
         override suspend fun setPrimary(id: String) = raw.setPrimary(id)
         override suspend fun updateRemark(id: String, remark: String) = raw.updateRemark(id, remark)
@@ -276,20 +230,6 @@ internal object SecureAccountDaos {
     //
     // ★ 回写条件一律是「读到的是**旧密文**」（`cipher.isEncrypted(...)`）：读明文时什么都不做，
     //   读旧密文时用明文覆盖原行，一次读取即完成迁移。若条件写反，旧密文会永远留在库里。
-
-    private suspend fun decryptGuangYa(raw: GuangYaAccountDao, cipher: CredentialCipher, stored: GuangYaAccountEntity): GuangYaAccountEntity =
-        withContext(Dispatchers.IO) {
-            val plain = stored.copy(
-                accessToken = cipher.decrypt(stored.accessToken, "guangya.accessToken"),
-                refreshToken = cipher.decrypt(stored.refreshToken, "guangya.refreshToken"),
-                deviceId = cipher.decrypt(stored.deviceId, "guangya.deviceId"),
-                deviceSign = cipher.decrypt(stored.deviceSign, "guangya.deviceSign")
-            )
-            if (listOf(stored.accessToken, stored.refreshToken, stored.deviceId, stored.deviceSign).any { cipher.isEncrypted(it) }) {
-                raw.upsert(plain)
-            }
-            plain
-        }
 
     private suspend fun decryptILanzou(raw: ILanzouAccountDao, cipher: CredentialCipher, stored: ILanzouAccountEntity): ILanzouAccountEntity =
         withContext(Dispatchers.IO) {
@@ -380,18 +320,6 @@ internal object SecureAccountDaos {
         withContext(Dispatchers.IO) {
             val plain = stored.copy(cookie = cipher.decrypt(stored.cookie, "baidu.cookie"))
             if (cipher.isEncrypted(stored.cookie)) raw.upsert(plain)
-            plain
-        }
-
-    private suspend fun decryptC139(raw: C139AccountDao, cipher: CredentialCipher, stored: C139AccountEntity): C139AccountEntity =
-        withContext(Dispatchers.IO) {
-            val plain = stored.copy(
-                cookie = cipher.decrypt(stored.cookie, "c139.cookie"),
-                authorization = cipher.decrypt(stored.authorization, "c139.authorization")
-            )
-            if (cipher.isEncrypted(stored.cookie) || cipher.isEncrypted(stored.authorization)) {
-                raw.upsert(plain)
-            }
             plain
         }
 

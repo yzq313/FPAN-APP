@@ -30,10 +30,8 @@ enum class SharePlatform(val displayName: String) {
     UC("UC 网盘"),
     XUNLEI("迅雷网盘"),
     BAIDU("百度网盘"),
-    C139("139 网盘"),
     PAN123("123云盘"),
     PAN115("115网盘"),
-    GUANGYA("光鸭云盘"),
     ILANZOU("蓝奏云优享版"),
     LANZOU("蓝奏云"),
     GITHUB("GitHub")

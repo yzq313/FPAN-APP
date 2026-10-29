@@ -35,10 +35,10 @@ import com.yunx.app.data.network.SharePlatform
  *   | `小红书.png` | `logo_xhs` | `夸克网盘.png` | `logo_quark` |
  *   | `快手.png` | `logo_kuaishou` | `UC网盘.png` | `logo_uc` |
  *   | `微博.png` | `logo_weibo` | `迅雷.png` | `logo_xunlei` |
- *   | `acfun.png` | `logo_acfun` | `中国移动云盘.png` | `logo_c139` |
+ *   | `acfun.png` | `logo_acfun` | `哔哩哔哩.png` | `logo_bilibili` |
  *   | `哔哩哔哩.png` | `logo_bilibili` | `123云盘.png` | `logo_123pan` |
  *   | `Pixiv.png` | `logo_pixiv` | `115网盘` | `logo_pan115` |
- *   | `github.png` | `logo_github` | `光鸭云盘.png` | `logo_guangya` |
+ *   | `github.png` | `logo_github` | `蓝奏云盘.png` | `logo_lanzou` |
  *   | `蓝奏云盘.png` | `logo_lanzou` | `蓝奏云优享版.png` | `logo_ilanzou` |
  *
  * ★ 换图只要覆盖同名 PNG 即可，不用改代码；新增平台在这里补一行。
@@ -52,10 +52,8 @@ fun SharePlatform.logoRes(): Int = when (this) {
     SharePlatform.UC -> R.drawable.logo_uc
     SharePlatform.XUNLEI -> R.drawable.logo_xunlei
     SharePlatform.BAIDU -> R.drawable.logo_baidu
-    SharePlatform.C139 -> R.drawable.logo_c139
     SharePlatform.PAN123 -> R.drawable.logo_123pan
     SharePlatform.PAN115 -> R.drawable.logo_pan115
-    SharePlatform.GUANGYA -> R.drawable.logo_guangya
     SharePlatform.ILANZOU -> R.drawable.logo_ilanzou
     SharePlatform.LANZOU -> R.drawable.logo_lanzou
     SharePlatform.GITHUB -> R.drawable.logo_github

@@ -42,10 +42,8 @@ class AccountDirectory(private val db: AppDatabase) {
         DownloadPlatform.UC -> db.ucAccountDao().observeAccounts()
         DownloadPlatform.XUNLEI -> db.xunleiAccountDao().observeAccounts()
         DownloadPlatform.BAIDU -> db.baiduAccountDao().observeAccounts()
-        DownloadPlatform.C139 -> db.c139AccountDao().observeAccounts()
         DownloadPlatform.PAN123 -> db.pan123AccountDao().observeAccounts()
         DownloadPlatform.PAN115 -> db.pan115AccountDao().observeAccounts()
-        DownloadPlatform.GUANGYA -> db.guangyaAccountDao().observeAccounts()
         DownloadPlatform.ILANZOU -> db.ilanzouAccountDao().observeAccounts()
         DownloadPlatform.LANZOU -> db.lanzouAccountDao().observeAccounts()
         else -> flowOf(emptyList())
@@ -57,10 +55,8 @@ class AccountDirectory(private val db: AppDatabase) {
         DownloadPlatform.UC -> db.ucAccountDao().getAccounts()
         DownloadPlatform.XUNLEI -> db.xunleiAccountDao().getAccounts()
         DownloadPlatform.BAIDU -> db.baiduAccountDao().getAccounts()
-        DownloadPlatform.C139 -> db.c139AccountDao().getAccounts()
         DownloadPlatform.PAN123 -> db.pan123AccountDao().getAccounts()
         DownloadPlatform.PAN115 -> db.pan115AccountDao().getAccounts()
-        DownloadPlatform.GUANGYA -> db.guangyaAccountDao().getAccounts()
         DownloadPlatform.ILANZOU -> db.ilanzouAccountDao().getAccounts()
         DownloadPlatform.LANZOU -> db.lanzouAccountDao().getAccounts()
         else -> emptyList()
@@ -113,19 +109,11 @@ class AccountDirectory(private val db: AppDatabase) {
             WriteOps({ d.setPrimary(it) }, { id, r -> d.updateRemark(id, r) }, { d.deleteById(it) })
         }
 
-        DownloadPlatform.C139 -> db.c139AccountDao().let { d ->
-            WriteOps({ d.setPrimary(it) }, { id, r -> d.updateRemark(id, r) }, { d.deleteById(it) })
-        }
-
         DownloadPlatform.PAN123 -> db.pan123AccountDao().let { d ->
             WriteOps({ d.setPrimary(it) }, { id, r -> d.updateRemark(id, r) }, { d.deleteById(it) })
         }
 
         DownloadPlatform.PAN115 -> db.pan115AccountDao().let { d ->
-            WriteOps({ d.setPrimary(it) }, { id, r -> d.updateRemark(id, r) }, { d.deleteById(it) })
-        }
-
-        DownloadPlatform.GUANGYA -> db.guangyaAccountDao().let { d ->
             WriteOps({ d.setPrimary(it) }, { id, r -> d.updateRemark(id, r) }, { d.deleteById(it) })
         }
 

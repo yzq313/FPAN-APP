@@ -111,13 +111,13 @@ import com.yunx.app.ui.theme.spatialDefault
 import com.yunx.app.ui.theme.spatialFast
 
 /**
- * 115 网盘云盘浏览页（参考 123/139 云盘页）：
+ * 115 网盘云盘浏览页（参考 123 云盘页）：
  * - 目录浏览 + 下拉刷新 + 面包屑回退
  * - 长按多选（批量下载/分享/移动/删除）
  * - 文件/文件夹操作菜单（下载/重命名/移动/分享/删除）
  * 认证走整串登录 Cookie（[com.yunx.app.data.db.Pan115AccountEntity.cookie]），目录 ID 用 cid（根="0"）；
  * 分享有效期是 115 专属档位（`ShareExpire.PAN115_OPTIONS`：长期/1/3/7/15 天），
- * 访问码由服务端生成、不可自定义（与 139 同规则），故提取码步骤传 `PasscodeMode.SERVER_GENERATED`。
+ * 访问码由服务端生成、不可自定义，故提取码步骤传 `PasscodeMode.SERVER_GENERATED`。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

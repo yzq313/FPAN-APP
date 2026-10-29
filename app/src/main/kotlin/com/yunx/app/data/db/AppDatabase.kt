@@ -30,8 +30,8 @@ import com.yunx.app.util.DiagnosticLog
 
 @Database(
     // Keep the retired video_account entity in Room's schema for upgrade compatibility; the app no longer exposes or uses it.
-    entities = [QuarkAccountEntity::class, DownloadTaskEntity::class, UCAccountEntity::class, XunleiAccountEntity::class, BaiduAccountEntity::class, C139AccountEntity::class, Pan123AccountEntity::class, Pan115AccountEntity::class, GuangYaAccountEntity::class, ILanzouAccountEntity::class, LanzouAccountEntity::class, BookmarkEntity::class, VideoAccountEntity::class],
-    version = 23,
+    entities = [QuarkAccountEntity::class, DownloadTaskEntity::class, UCAccountEntity::class, XunleiAccountEntity::class, BaiduAccountEntity::class, Pan123AccountEntity::class, Pan115AccountEntity::class, ILanzouAccountEntity::class, LanzouAccountEntity::class, BookmarkEntity::class, VideoAccountEntity::class],
+    version = 24,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,13 +46,9 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun rawBaiduAccountDao(): BaiduAccountDao
 
-    abstract fun rawC139AccountDao(): C139AccountDao
-
     abstract fun rawPan123AccountDao(): Pan123AccountDao
 
     abstract fun rawPan115AccountDao(): Pan115AccountDao
-
-    abstract fun rawGuangYaAccountDao(): GuangYaAccountDao
 
     abstract fun rawILanzouAccountDao(): ILanzouAccountDao
 
@@ -66,10 +62,8 @@ abstract class AppDatabase : RoomDatabase() {
     fun ucAccountDao(): UCAccountDao = SecureAccountDaos.uc(rawUcAccountDao(), credentialCipher)
     fun xunleiAccountDao(): XunleiAccountDao = SecureAccountDaos.xunlei(rawXunleiAccountDao(), credentialCipher)
     fun baiduAccountDao(): BaiduAccountDao = SecureAccountDaos.baidu(rawBaiduAccountDao(), credentialCipher)
-    fun c139AccountDao(): C139AccountDao = SecureAccountDaos.c139(rawC139AccountDao(), credentialCipher)
     fun pan123AccountDao(): Pan123AccountDao = SecureAccountDaos.pan123(rawPan123AccountDao(), credentialCipher)
     fun pan115AccountDao(): Pan115AccountDao = SecureAccountDaos.pan115(rawPan115AccountDao(), credentialCipher)
-    fun guangyaAccountDao(): GuangYaAccountDao = SecureAccountDaos.guangya(rawGuangYaAccountDao(), credentialCipher)
     fun ilanzouAccountDao(): ILanzouAccountDao = SecureAccountDaos.ilanzou(rawILanzouAccountDao(), credentialCipher)
     fun lanzouAccountDao(): LanzouAccountDao = SecureAccountDaos.lanzou(rawLanzouAccountDao(), credentialCipher)
 
@@ -98,7 +92,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_19_20,
                         MIGRATION_20_21,
                         MIGRATION_21_22,
-                        MIGRATION_22_23
+                        MIGRATION_22_23,
+                        MIGRATION_23_24
                     )
                     // 早期开发版（1-8）无可靠 schema；从 v9 起必须保留凭证和下载任务
                     .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8)
@@ -222,21 +217,9 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /** v18：新增光鸭云盘 / 蓝奏云优享版 / 蓝奏云登录凭证表（凭证落库前在 SecureAccountDaos 里加密） */
+        /** v18：新增蓝奏云优享版 / 蓝奏云登录凭证表（凭证落库前在 SecureAccountDaos 里加密） */
         private val MIGRATION_17_18 = object : Migration(17, 18) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `guangya_account` (" +
-                        "`id` TEXT NOT NULL, " +
-                        "`accessToken` TEXT NOT NULL, " +
-                        "`refreshToken` TEXT NOT NULL, " +
-                        "`deviceId` TEXT NOT NULL, " +
-                        "`deviceSign` TEXT NOT NULL, " +
-                        "`account` TEXT NOT NULL, " +
-                        "`nickname` TEXT NOT NULL, " +
-                        "`updatedAt` INTEGER NOT NULL, " +
-                        "PRIMARY KEY(`id`))"
-                )
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS `ilanzou_account` (" +
                         "`id` TEXT NOT NULL, " +
@@ -270,8 +253,8 @@ abstract class AppDatabase : RoomDatabase() {
 
         /** 需要「多账号」两列的全部账号表（与 [entities] 里的 `*_account` 一一对应） */
         private val ACCOUNT_TABLES = listOf(
-            "quark_account", "uc_account", "xunlei_account", "baidu_account", "c139_account",
-            "pan123_account", "pan115_account", "guangya_account", "ilanzou_account", "lanzou_account"
+            "quark_account", "uc_account", "xunlei_account", "baidu_account",
+            "pan123_account", "pan115_account", "ilanzou_account", "lanzou_account"
         )
 
         /**
@@ -347,6 +330,14 @@ abstract class AppDatabase : RoomDatabase() {
         private val MIGRATION_22_23 = object : Migration(22, 23) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `download_task` ADD COLUMN `motionUrl` TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        /** v24：移除已下线的 139 网盘和光鸭云盘账号表。 */
+        private val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `c139_account`")
+                db.execSQL("DROP TABLE IF EXISTS `guangya_account`")
             }
         }
     }

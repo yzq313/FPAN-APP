@@ -73,10 +73,8 @@ class SettingsDirectoryPickerTest {
                 database.rawUcAccountDao(),
                 database.rawXunleiAccountDao(),
                 database.rawBaiduAccountDao(),
-                database.rawC139AccountDao(),
                 database.rawPan123AccountDao(),
                 database.rawPan115AccountDao(),
-                database.rawGuangYaAccountDao(),
                 database.rawILanzouAccountDao(),
                 database.rawLanzouAccountDao()
             )

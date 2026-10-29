@@ -101,11 +101,9 @@ import com.yunx.app.data.download.DownloadManager
 import com.yunx.app.data.download.DownloadPlatform
 import com.yunx.app.data.backup.AuthBackupManager
 import com.yunx.app.data.network.BaiduApi
-import com.yunx.app.data.network.C139Api
 import com.yunx.app.data.network.GitHubApi
 import com.yunx.app.data.network.GitHubLinkParser
 import com.yunx.app.data.network.GitHubTokenStore
-import com.yunx.app.data.network.GuangYaApi
 import com.yunx.app.data.network.ILanzouApi
 import com.yunx.app.data.network.LanzouApi
 import com.yunx.app.data.network.Pan115Api
@@ -119,10 +117,6 @@ import com.yunx.app.data.update.UpdateChecker
 import com.yunx.app.data.repository.AccountDirectory
 import com.yunx.app.data.repository.BaiduAccountRepository
 import com.yunx.app.data.repository.BaiduResolveRepository
-import com.yunx.app.data.repository.C139AccountRepository
-import com.yunx.app.data.repository.C139ResolveRepository
-import com.yunx.app.data.repository.GuangYaAccountRepository
-import com.yunx.app.data.repository.GuangYaResolveRepository
 import com.yunx.app.data.repository.ILanzouAccountRepository
 import com.yunx.app.data.repository.ILanzouResolveRepository
 import com.yunx.app.data.repository.LanzouAccountRepository
@@ -138,8 +132,6 @@ import com.yunx.app.data.repository.UCResolveRepository
 import com.yunx.app.data.repository.XunleiAccountRepository
 import com.yunx.app.data.repository.XunleiResolveRepository
 import com.yunx.app.ui.login.BaiduLoginScreen
-import com.yunx.app.ui.login.C139LoginScreen
-import com.yunx.app.ui.login.GuangYaLoginScreen
 import com.yunx.app.ui.login.ILanzouLoginScreen
 import com.yunx.app.ui.login.LanzouLoginScreen
 import com.yunx.app.ui.login.Pan115LoginScreen
@@ -172,10 +164,6 @@ import com.yunx.app.ui.viewmodel.AnnouncementViewModel
 import com.yunx.app.ui.viewmodel.BaiduAccountViewModel
 import com.yunx.app.ui.viewmodel.BaiduCloudViewModel
 import com.yunx.app.ui.viewmodel.BookmarkViewModel
-import com.yunx.app.ui.viewmodel.C139AccountViewModel
-import com.yunx.app.ui.viewmodel.C139CloudViewModel
-import com.yunx.app.ui.viewmodel.GuangYaAccountViewModel
-import com.yunx.app.ui.viewmodel.GuangYaCloudViewModel
 import com.yunx.app.ui.viewmodel.ILanzouAccountViewModel
 import com.yunx.app.ui.viewmodel.ILanzouCloudViewModel
 import com.yunx.app.ui.viewmodel.LanzouAccountViewModel
@@ -271,10 +259,8 @@ fun MainScreen(
     var xunleiVerifyUrl by rememberSaveable { mutableStateOf("") }
     var xunleiVerifyDeviceId by rememberSaveable { mutableStateOf("") }
     var showBaiduLogin by rememberSaveable { mutableStateOf(false) }
-    var showC139Login by rememberSaveable { mutableStateOf(false) }
     var showPan123Login by rememberSaveable { mutableStateOf(false) }
     var showPan115Login by rememberSaveable { mutableStateOf(false) }
-    var showGuangYaLogin by rememberSaveable { mutableStateOf(false) }
     var showILanzouLogin by rememberSaveable { mutableStateOf(false) }
     var showLanzouLogin by rememberSaveable { mutableStateOf(false) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
@@ -376,10 +362,8 @@ fun MainScreen(
     val ucApi = remember { UCApi() }
     val xunleiApi = remember { XunleiApi() }
     val baiduApi = remember { BaiduApi() }
-    val c139Api = remember { C139Api() }
     val pan123Api = remember { Pan123Api() }
     val pan115Api = remember { Pan115Api() }
-    val guangyaApi = remember { GuangYaApi() }
     val ilanzouApi = remember { ILanzouApi() }
     val lanzouApi = remember { LanzouApi() }
     val db = remember { AppDatabase.get(context) }
@@ -397,20 +381,12 @@ fun MainScreen(
     val baiduRepository = remember {
         BaiduAccountRepository(db.baiduAccountDao(), baiduApi)
     }
-    val c139Repository = remember {
-        C139AccountRepository(db.c139AccountDao())
-    }
     val pan123Repository = remember {
         Pan123AccountRepository(db.pan123AccountDao(), pan123Api)
     }
     val pan115Repository = remember {
         Pan115AccountRepository(db.pan115AccountDao(), pan115Api)
     }
-    val guangyaRepository = remember {
-        GuangYaAccountRepository(db.guangyaAccountDao(), guangyaApi)
-    }
-    // 光鸭业务 API（个人盘 / 分享）必须带 did 设备头：从仓库缓存的 deviceId 同步注入
-    guangyaApi.deviceIdProvider = { guangyaRepository.cachedDeviceId() }
     val ilanzouRepository = remember {
         ILanzouAccountRepository(db.ilanzouAccountDao(), ilanzouApi)
     }
@@ -424,10 +400,8 @@ fun MainScreen(
             db.ucAccountDao(),
             db.xunleiAccountDao(),
             db.baiduAccountDao(),
-            db.c139AccountDao(),
             db.pan123AccountDao(),
             db.pan115AccountDao(),
-            db.guangyaAccountDao(),
             db.ilanzouAccountDao(),
             db.lanzouAccountDao(),
         )
@@ -500,17 +474,11 @@ fun MainScreen(
     val baiduViewModel: BaiduAccountViewModel = viewModel(
         factory = BaiduAccountViewModel.Factory(baiduRepository)
     )
-    val c139ViewModel: C139AccountViewModel = viewModel(
-        factory = C139AccountViewModel.Factory(c139Repository)
-    )
     val pan123ViewModel: Pan123AccountViewModel = viewModel(
         factory = Pan123AccountViewModel.Factory(pan123Repository)
     )
     val pan115ViewModel: Pan115AccountViewModel = viewModel(
         factory = Pan115AccountViewModel.Factory(pan115Repository)
-    )
-    val guangyaViewModel: GuangYaAccountViewModel = viewModel(
-        factory = GuangYaAccountViewModel.Factory(guangyaRepository)
     )
     val ilanzouViewModel: ILanzouAccountViewModel = viewModel(
         factory = ILanzouAccountViewModel.Factory(ilanzouRepository)
@@ -529,10 +497,8 @@ fun MainScreen(
     val ucLoginState = remember { ucRepository.observeAccount().map { it != null } }
     val xunleiLoginState = remember { xunleiRepository.observeAccount().map { it != null } }
     val baiduLoginState = remember { baiduRepository.observeAccount().map { it != null } }
-    val c139LoginState = remember { c139Repository.observeAccount().map { it != null } }
     val pan123LoginState = remember { pan123Repository.observeAccount().map { it != null } }
     val pan115LoginState = remember { pan115Repository.observeAccount().map { it != null } }
-    val guangyaLoginState = remember { guangyaRepository.observeAccount().map { it != null } }
     val ilanzouLoginState = remember { ilanzouRepository.observeAccount().map { it != null } }
     val lanzouLoginState = remember { lanzouRepository.observeAccount().map { it != null } }
     // 夸克云盘浏览：作为网盘 Tab 内容展示（非全屏），cookie 从数据库读取（避免 StateFlow 初始值为空的竞态）；
@@ -587,15 +553,6 @@ fun MainScreen(
             loginState = baiduLoginState
         )
     )
-    // 139 网盘云盘浏览：点击已登录的 139 卡片打开（cookie 从数据库读取）
-    val c139CloudViewModel: C139CloudViewModel = viewModel(
-        factory = C139CloudViewModel.Factory(
-            c139Api,
-            { c139Repository.getAccount()?.cookie },
-            downloadManager,
-            loginState = c139LoginState
-        )
-    )
     // 123 云盘浏览：点击已登录的 123 卡片打开（token 从数据库读取）
     val pan123CloudViewModel: Pan123CloudViewModel = viewModel(
         factory = Pan123CloudViewModel.Factory(
@@ -612,15 +569,6 @@ fun MainScreen(
             { pan115Repository.getAccount()?.cookie },
             downloadManager,
             loginState = pan115LoginState
-        )
-    )
-    // 光鸭云盘浏览：点击已登录的光鸭卡片打开（access token / 设备标识从数据库读取）
-    val guangyaCloudViewModel: GuangYaCloudViewModel = viewModel(
-        factory = GuangYaCloudViewModel.Factory(
-            guangyaApi,
-            guangyaRepository,
-            downloadManager,
-            loginState = guangyaLoginState
         )
     )
     // 蓝奏云优享版浏览：点击已登录的蓝奏优享卡片打开（appToken + uuid 从数据库读取）
@@ -651,10 +599,8 @@ fun MainScreen(
             { xunleiRepository.getAccount()?.deviceId },
             { xunleiRepository.getAccount()?.captchaToken },
             baiduApi, { baiduRepository.getAccount()?.cookie },
-            c139Api, { c139Repository.getAccount()?.cookie },
             pan123Api, { pan123Repository.getAccount()?.accessToken },
             pan115Api, { pan115Repository.getAccount()?.cookie },
-            guangyaApi, { guangyaRepository.getAccount() },
             ilanzouApi, { ilanzouRepository.getAccount() }
         )
     )
@@ -682,9 +628,6 @@ fun MainScreen(
     val baiduResolveRepository = remember {
         BaiduResolveRepository(baiduApi)
     }
-    val c139ResolveRepository = remember {
-        C139ResolveRepository(c139Api)
-    }
     val pan123ResolveRepository = remember {
         Pan123ResolveRepository(
             api = pan123Api,
@@ -693,13 +636,6 @@ fun MainScreen(
     }
     val pan115ResolveRepository = remember {
         Pan115ResolveRepository(pan115Api)
-    }
-    val guangyaResolveRepository = remember {
-        GuangYaResolveRepository(
-            api = guangyaApi,
-            // 转存取链需要有效 access：用 ensureAccessToken（临近过期会先刷新）
-            tokenProvider = { guangyaRepository.ensureAccessToken() }
-        )
     }
     val lanzouResolveRepository = remember {
         LanzouResolveRepository(lanzouApi)
@@ -717,14 +653,10 @@ fun MainScreen(
             xunleiResolveRepository,
             baiduRepository,
             baiduResolveRepository,
-            c139Repository,
-            c139ResolveRepository,
             pan123Repository,
             pan123ResolveRepository,
             pan115Repository,
             pan115ResolveRepository,
-            guangyaRepository,
-            guangyaResolveRepository,
             ilanzouRepository,
             ilanzouResolveRepository,
             lanzouRepository,
@@ -750,10 +682,8 @@ fun MainScreen(
     val ucAccount by ucViewModel.ucAccount.collectAsState()
     val xunleiAccount by xunleiViewModel.xunleiAccount.collectAsState()
     val baiduAccount by baiduViewModel.baiduAccount.collectAsState()
-    val c139Account by c139ViewModel.c139Account.collectAsState()
     val pan123Account by pan123ViewModel.pan123Account.collectAsState()
     val pan115Account by pan115ViewModel.pan115Account.collectAsState()
-    val guangyaAccount by guangyaViewModel.guangyaAccount.collectAsState()
     val ilanzouAccount by ilanzouViewModel.ilanzouAccount.collectAsState()
     val lanzouAccount by lanzouViewModel.lanzouAccount.collectAsState()
 
@@ -888,18 +818,6 @@ fun MainScreen(
         return
     }
 
-    // 139 登录页：全屏覆盖（WebView 登录提取 Cookie）
-    if (showC139Login) {
-        C139LoginScreen(
-            viewModel = c139ViewModel,
-            onBack = {
-                showC139Login = false
-                c139ViewModel.cancelAddAccount()
-            },
-            onSaved = { showC139Login = false }
-        )
-        return
-    }
 
     // 123 登录页：全屏覆盖（WebView 打开官网登录，提取 localStorage 的 authorToken）
     if (showPan123Login) {
@@ -927,18 +845,6 @@ fun MainScreen(
         return
     }
 
-    // 光鸭登录页：全屏覆盖（账号密码登录）
-    if (showGuangYaLogin) {
-        GuangYaLoginScreen(
-            viewModel = guangyaViewModel,
-            onBack = {
-                showGuangYaLogin = false
-                guangyaViewModel.cancelAddAccount()
-            },
-            onSaved = { showGuangYaLogin = false }
-        )
-        return
-    }
 
     // 蓝奏云优享版登录页：全屏覆盖（账号密码登录）
     if (showILanzouLogin) {
@@ -1174,11 +1080,9 @@ fun MainScreen(
                                     quarkCloudViewModel,
                                     xunleiCloudViewModel,
                                     baiduCloudViewModel,
-                                    c139CloudViewModel,
                                     ucCloudViewModel,
                                     pan123CloudViewModel,
                                     pan115CloudViewModel,
-                                    guangyaCloudViewModel,
                                     bookmarkViewModel = bookmarkViewModel,
                                     onOpenBookmarks = { showBookmarks = true },
                                     // 深链接 / 分享进来的链接：解析页填进输入框并自动发起解析
@@ -1191,20 +1095,16 @@ fun MainScreen(
                                     ucAccount = ucAccount,
                                     xunleiAccount = xunleiAccount,
                                     baiduAccount = baiduAccount,
-                                    c139Account = c139Account,
                                     pan123Account = pan123Account,
                                     pan115Account = pan115Account,
-                                    guangyaAccount = guangyaAccount,
                                     ilanzouAccount = ilanzouAccount,
                                     lanzouAccount = lanzouAccount,
                                     quarkCloudViewModel = quarkCloudViewModel,
                                     ucCloudViewModel = ucCloudViewModel,
                                     xunleiCloudViewModel = xunleiCloudViewModel,
                                     baiduCloudViewModel = baiduCloudViewModel,
-                                    c139CloudViewModel = c139CloudViewModel,
                                     pan123CloudViewModel = pan123CloudViewModel,
                                     pan115CloudViewModel = pan115CloudViewModel,
-                                    guangyaCloudViewModel = guangyaCloudViewModel,
                                     ilanzouCloudViewModel = ilanzouCloudViewModel,
                                     lanzouCloudViewModel = lanzouCloudViewModel,
                                     driveQuotaViewModel = driveQuotaViewModel,
@@ -1233,20 +1133,12 @@ fun MainScreen(
                                                 baiduViewModel.beginAddAccount(); showBaiduLogin = true
                                             }
 
-                                            DownloadPlatform.C139 -> {
-                                                c139ViewModel.beginAddAccount(); showC139Login = true
-                                            }
-
                                             DownloadPlatform.PAN123 -> {
                                                 pan123ViewModel.beginAddAccount(); showPan123Login = true
                                             }
 
                                             DownloadPlatform.PAN115 -> {
                                                 pan115ViewModel.beginAddAccount(); showPan115Login = true
-                                            }
-
-                                            DownloadPlatform.GUANGYA -> {
-                                                guangyaViewModel.beginAddAccount(); showGuangYaLogin = true
                                             }
 
                                             DownloadPlatform.ILANZOU -> {
@@ -1263,10 +1155,8 @@ fun MainScreen(
                                     onUCLogin = { showUCLogin = true },
                                     onXunleiLogin = { showXunleiLogin = true },
                                     onBaiduLogin = { showBaiduLogin = true },
-                                    onC139Login = { showC139Login = true },
                                     onPan123Login = { showPan123Login = true },
                                     onPan115Login = { showPan115Login = true },
-                                    onGuangYaLogin = { showGuangYaLogin = true },
                                     onILanzouLogin = { showILanzouLogin = true },
                                     onLanzouLogin = { showLanzouLogin = true },
                                 )

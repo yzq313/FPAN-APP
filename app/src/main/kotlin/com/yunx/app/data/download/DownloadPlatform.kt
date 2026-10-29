@@ -27,11 +27,8 @@ object DownloadPlatform {
     const val UC = "uc"
     const val XUNLEI = "xunlei"
     const val BAIDU = "baidu"
-    const val C139 = "c139"
     const val PAN123 = "pan123"
     const val PAN115 = "pan115"
-    /** 光鸭云盘 */
-    const val GUANGYA = "guangya"
     /** 蓝奏云优享版 */
     const val ILANZOU = "ilanzou"
     /** 蓝奏云 */

@@ -26,10 +26,6 @@ import android.os.Environment
 import android.provider.MediaStore
 import com.yunx.app.data.db.BaiduAccountDao
 import com.yunx.app.data.db.BaiduAccountEntity
-import com.yunx.app.data.db.C139AccountDao
-import com.yunx.app.data.db.C139AccountEntity
-import com.yunx.app.data.db.GuangYaAccountDao
-import com.yunx.app.data.db.GuangYaAccountEntity
 import com.yunx.app.data.db.ILanzouAccountDao
 import com.yunx.app.data.db.ILanzouAccountEntity
 import com.yunx.app.data.db.LanzouAccountDao
@@ -63,10 +59,8 @@ class AuthBackupManager(
     private val ucDao: UCAccountDao,
     private val xunleiDao: XunleiAccountDao,
     private val baiduDao: BaiduAccountDao,
-    private val c139Dao: C139AccountDao,
     private val pan123Dao: Pan123AccountDao,
     private val pan115Dao: Pan115AccountDao,
-    private val guangyaDao: GuangYaAccountDao,
     private val ilanzouDao: ILanzouAccountDao,
     private val lanzouDao: LanzouAccountDao
 ) {
@@ -136,16 +130,6 @@ class AuthBackupManager(
                     .put("updatedAt", a.updatedAt)
             )
         }
-        c139Dao.getAccount()?.let { a ->
-            if (!onlyLoggedIn || a.cookie.isNotBlank()) accounts.put(
-                JSONObject()
-                    .put("platform", "c139")
-                    .put("cookie", a.cookie)
-                    .put("authorization", a.authorization)
-                    .put("nickname", a.nickname)
-                    .put("updatedAt", a.updatedAt)
-            )
-        }
         pan123Dao.getAccount()?.let { a ->
             if (!onlyLoggedIn || a.accessToken.isNotBlank()) accounts.put(
                 JSONObject()
@@ -161,19 +145,6 @@ class AuthBackupManager(
                 JSONObject()
                     .put("platform", "pan115")
                     .put("cookie", a.cookie)
-                    .put("nickname", a.nickname)
-                    .put("updatedAt", a.updatedAt)
-            )
-        }
-        guangyaDao.getAccount()?.let { a ->
-            if (!onlyLoggedIn || a.accessToken.isNotBlank()) accounts.put(
-                JSONObject()
-                    .put("platform", "guangya")
-                    .put("accessToken", a.accessToken)
-                    .put("refreshToken", a.refreshToken)
-                    .put("deviceId", a.deviceId)
-                    .put("deviceSign", a.deviceSign)
-                    .put("account", a.account)
                     .put("nickname", a.nickname)
                     .put("updatedAt", a.updatedAt)
             )
@@ -291,19 +262,6 @@ class AuthBackupManager(
                         ); count++
                     }
                 }
-                "c139" -> {
-                    val c = obj.optString("cookie")
-                    if (c.isNotBlank()) {
-                        c139Dao.upsert(
-                            C139AccountEntity(
-                                id = "c139", cookie = c,
-                                authorization = obj.optString("authorization"),
-                                nickname = obj.optString("nickname"),
-                                updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
-                            )
-                        ); count++
-                    }
-                }
                 "pan123" -> {
                     val t = obj.optString("accessToken")
                     if (t.isNotBlank()) {
@@ -323,22 +281,6 @@ class AuthBackupManager(
                         pan115Dao.upsert(
                             Pan115AccountEntity(
                                 id = "pan115", cookie = c,
-                                nickname = obj.optString("nickname"),
-                                updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
-                            )
-                        ); count++
-                    }
-                }
-                "guangya" -> {
-                    val t = obj.optString("accessToken")
-                    if (t.isNotBlank()) {
-                        guangyaDao.upsert(
-                            GuangYaAccountEntity(
-                                id = "guangya", accessToken = t,
-                                refreshToken = obj.optString("refreshToken"),
-                                deviceId = obj.optString("deviceId"),
-                                deviceSign = obj.optString("deviceSign"),
-                                account = obj.optString("account"),
                                 nickname = obj.optString("nickname"),
                                 updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
                             )

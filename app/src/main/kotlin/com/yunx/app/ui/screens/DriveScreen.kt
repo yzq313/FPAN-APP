@@ -77,8 +77,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yunx.app.data.db.BaiduAccountEntity
-import com.yunx.app.data.db.C139AccountEntity
-import com.yunx.app.data.db.GuangYaAccountEntity
 import com.yunx.app.data.db.ILanzouAccountEntity
 import com.yunx.app.data.db.LanzouAccountEntity
 import com.yunx.app.data.db.Pan115AccountEntity
@@ -89,9 +87,7 @@ import com.yunx.app.data.db.XunleiAccountEntity
 import com.yunx.app.data.download.DownloadPlatform
 import com.yunx.app.data.network.model.QuotaInfo
 import com.yunx.app.ui.viewmodel.BaiduCloudViewModel
-import com.yunx.app.ui.viewmodel.C139CloudViewModel
 import com.yunx.app.ui.viewmodel.DriveQuotaViewModel
-import com.yunx.app.ui.viewmodel.GuangYaCloudViewModel
 import com.yunx.app.ui.viewmodel.ILanzouCloudViewModel
 import com.yunx.app.ui.viewmodel.LanzouCloudViewModel
 import com.yunx.app.ui.viewmodel.MultiAccountViewModel
@@ -131,10 +127,8 @@ fun DriveScreen(
     ucAccount: UCAccountEntity?,
     xunleiAccount: XunleiAccountEntity?,
     baiduAccount: BaiduAccountEntity?,
-    c139Account: C139AccountEntity?,
     pan123Account: Pan123AccountEntity?,
     pan115Account: Pan115AccountEntity?,
-    guangyaAccount: GuangYaAccountEntity?,
     ilanzouAccount: ILanzouAccountEntity?,
     lanzouAccount: LanzouAccountEntity?,
     /** 夸克云盘浏览 ViewModel（网盘 Tab 内切换展示，非全屏） */
@@ -145,14 +139,10 @@ fun DriveScreen(
     xunleiCloudViewModel: XunleiCloudViewModel,
     /** 百度网盘云盘浏览 ViewModel */
     baiduCloudViewModel: BaiduCloudViewModel,
-    /** 139 网盘云盘浏览 ViewModel */
-    c139CloudViewModel: C139CloudViewModel,
     /** 123 云盘浏览 ViewModel */
     pan123CloudViewModel: Pan123CloudViewModel,
     /** 115 网盘浏览 ViewModel */
     pan115CloudViewModel: Pan115CloudViewModel,
-    /** 光鸭云盘浏览 ViewModel */
-    guangyaCloudViewModel: GuangYaCloudViewModel,
     /** 蓝奏云优享版浏览 ViewModel */
     ilanzouCloudViewModel: ILanzouCloudViewModel,
     /** 蓝奏云浏览 ViewModel */
@@ -169,10 +159,8 @@ fun DriveScreen(
     onUCLogin: () -> Unit,
     onXunleiLogin: () -> Unit,
     onBaiduLogin: () -> Unit,
-    onC139Login: () -> Unit,
     onPan123Login: () -> Unit,
     onPan115Login: () -> Unit,
-    onGuangYaLogin: () -> Unit,
     onILanzouLogin: () -> Unit,
     onLanzouLogin: () -> Unit,
     modifier: Modifier = Modifier
@@ -181,10 +169,8 @@ fun DriveScreen(
     var showUCSheet by remember { mutableStateOf(false) }
     var showXunleiSheet by remember { mutableStateOf(false) }
     var showBaiduSheet by remember { mutableStateOf(false) }
-    var showC139Sheet by remember { mutableStateOf(false) }
     var showPan123Sheet by remember { mutableStateOf(false) }
     var showPan115Sheet by remember { mutableStateOf(false) }
-    var showGuangYaSheet by remember { mutableStateOf(false) }
     var showILanzouSheet by remember { mutableStateOf(false) }
     var showLanzouSheet by remember { mutableStateOf(false) }
     // 夸克云盘浏览：网盘 Tab 内切换（非全屏），切 Tab 再回来仍保留
@@ -195,14 +181,10 @@ fun DriveScreen(
     var showXunleiCloud by rememberSaveable { mutableStateOf(false) }
     // 百度网盘云盘浏览：网盘 Tab 内切换（非全屏）
     var showBaiduCloud by rememberSaveable { mutableStateOf(false) }
-    // 139 网盘云盘浏览：网盘 Tab 内切换（非全屏）
-    var showC139Cloud by rememberSaveable { mutableStateOf(false) }
     // 123 云盘浏览：网盘 Tab 内切换（非全屏）
     var showPan123Cloud by rememberSaveable { mutableStateOf(false) }
     // 115 网盘浏览：网盘 Tab 内切换（非全屏）
     var showPan115Cloud by rememberSaveable { mutableStateOf(false) }
-    // 光鸭云盘浏览：网盘 Tab 内切换（非全屏）
-    var showGuangYaCloud by rememberSaveable { mutableStateOf(false) }
     // 蓝奏云优享版浏览：网盘 Tab 内切换（非全屏）
     var showILanzouCloud by rememberSaveable { mutableStateOf(false) }
     // 蓝奏云浏览：网盘 Tab 内切换（非全屏）
@@ -237,13 +219,6 @@ fun DriveScreen(
         avatarText = "度",
         isLoggedIn = baiduAccount != null
     )
-    val c139 = DriveAccount(
-        id = "c139",
-        name = "139网盘",
-        description = c139Account?.nickname ?: "点击登录，管理网盘文件",
-        avatarText = "139",
-        isLoggedIn = c139Account != null
-    )
     val pan123 = DriveAccount(
         id = "pan123",
         name = "123云盘",
@@ -257,13 +232,6 @@ fun DriveScreen(
         description = pan115Account?.nickname ?: "点击登录，支持解析下载",
         avatarText = "115",
         isLoggedIn = pan115Account != null
-    )
-    val guangya = DriveAccount(
-        id = "guangya",
-        name = "光鸭云盘",
-        description = guangyaAccount?.nickname ?: "点击登录，管理网盘文件",
-        avatarText = "光",
-        isLoggedIn = guangyaAccount != null
     )
     val ilanzou = DriveAccount(
         id = "ilanzou",
@@ -290,17 +258,15 @@ fun DriveScreen(
     // 下拉刷新状态：绑定空间配额加载中状态
     val isRefreshing by driveQuotaViewModel.loading.collectAsState()
 
-    // 账号列表 ↔ 夸克云盘 ↔ UC 云盘 ↔ 迅雷云盘 ↔ 百度云盘 ↔ 139 云盘 ↔ 123 云盘：平滑过渡（淡入 + 轻微缩放，不僵硬）
+    // 账号列表与各网盘页之间平滑过渡（淡入 + 轻微缩放，不僵硬）
     AnimatedContent(
         targetState = when {
             showCloud -> 1
             showUCCloud -> 2
             showXunleiCloud -> 3
             showBaiduCloud -> 4
-            showC139Cloud -> 5
             showPan123Cloud -> 6
             showPan115Cloud -> 7
-            showGuangYaCloud -> 8
             showILanzouCloud -> 9
             showLanzouCloud -> 10
             else -> 0
@@ -336,11 +302,6 @@ fun DriveScreen(
             onExit = { showBaiduCloud = false },
             onDownloadStarted = onDownloadStarted
         )
-        5 -> C139CloudScreen(
-            viewModel = c139CloudViewModel,
-            scrollBehavior = scrollBehavior,
-            onExit = { showC139Cloud = false }
-        )
         6 -> Pan123CloudScreen(
             viewModel = pan123CloudViewModel,
             scrollBehavior = scrollBehavior,
@@ -352,11 +313,6 @@ fun DriveScreen(
             scrollBehavior = scrollBehavior,
             onExit = { showPan115Cloud = false },
             onDownloadStarted = onDownloadStarted
-        )
-        8 -> GuangYaCloudScreen(
-            viewModel = guangyaCloudViewModel,
-            scrollBehavior = scrollBehavior,
-            onExit = { showGuangYaCloud = false }
         )
         9 -> ILanzouCloudScreen(
             viewModel = ilanzouCloudViewModel,
@@ -394,7 +350,7 @@ fun DriveScreen(
                     )
                 }
                 // 只对网盘分组；GitHub 和视频账号保留原来的位置和行为。
-                val drives = listOf(quark, uc, xunlei, baidu, c139, pan123, pan115, guangya, ilanzou, lanzou)
+                val drives = listOf(quark, uc, xunlei, baidu, pan123, pan115, ilanzou, lanzou)
                 val hasLoggedIn = drives.any { it.isLoggedIn }
                 for (loggedIn in listOf(true, false)) {
                     if (drives.none { it.isLoggedIn == loggedIn }) continue
@@ -465,22 +421,6 @@ fun DriveScreen(
                         }
                     )
                 }
-                if (c139.isLoggedIn == loggedIn) item(key = c139.id) {
-                    DriveAccountCard(
-                        account = c139,
-                        quota = driveQuotaViewModel.c139Quota.collectAsState().value,
-                        onClick = if (c139.isLoggedIn) {
-                            { showC139Cloud = true }
-                        } else {
-                            onC139Login
-                        },
-                        onMoreClick = if (c139.isLoggedIn) {
-                            { showC139Sheet = true }
-                        } else {
-                            null
-                        }
-                    )
-                }
                 if (pan123.isLoggedIn == loggedIn) item(key = pan123.id) {
                     DriveAccountCard(
                         account = pan123,
@@ -508,22 +448,6 @@ fun DriveScreen(
                         },
                         onMoreClick = if (pan115.isLoggedIn) {
                             { showPan115Sheet = true }
-                        } else {
-                            null
-                        }
-                    )
-                }
-                if (guangya.isLoggedIn == loggedIn) item(key = guangya.id) {
-                    DriveAccountCard(
-                        account = guangya,
-                        quota = driveQuotaViewModel.guangyaQuota.collectAsState().value,
-                        onClick = if (guangya.isLoggedIn) {
-                            { showGuangYaCloud = true }
-                        } else {
-                            onGuangYaLogin
-                        },
-                        onMoreClick = if (guangya.isLoggedIn) {
-                            { showGuangYaSheet = true }
                         } else {
                             null
                         }
@@ -625,19 +549,6 @@ fun DriveScreen(
         )
     }
 
-    // 已登录 139：点击卡片弹出账号信息底部弹窗（含多账号管理）
-    val c139Accounts by multiAccountViewModel.accountsOf(DownloadPlatform.C139).collectAsState()
-    if (showC139Sheet && c139Account != null) {
-        C139AccountSheet(
-            account = c139Account,
-            accounts = c139Accounts,
-            onSetPrimary = { multiAccountViewModel.setPrimary(DownloadPlatform.C139, it) },
-            onRename = { id, remark -> multiAccountViewModel.rename(DownloadPlatform.C139, id, remark) },
-            onRemove = { multiAccountViewModel.remove(DownloadPlatform.C139, it) },
-            onAddAccount = { onAddAccount(DownloadPlatform.C139) },
-            onDismiss = { showC139Sheet = false }
-        )
-    }
 
     // 已登录 123：点击卡片弹出账号信息底部弹窗（含多账号管理）
     val pan123Accounts by multiAccountViewModel.accountsOf(DownloadPlatform.PAN123).collectAsState()
@@ -667,19 +578,6 @@ fun DriveScreen(
         )
     }
 
-    // 已登录光鸭：点击卡片弹出账号信息底部弹窗（含多账号管理）
-    val guangyaAccounts by multiAccountViewModel.accountsOf(DownloadPlatform.GUANGYA).collectAsState()
-    if (showGuangYaSheet && guangyaAccount != null) {
-        GuangYaAccountSheet(
-            account = guangyaAccount,
-            accounts = guangyaAccounts,
-            onSetPrimary = { multiAccountViewModel.setPrimary(DownloadPlatform.GUANGYA, it) },
-            onRename = { id, remark -> multiAccountViewModel.rename(DownloadPlatform.GUANGYA, id, remark) },
-            onRemove = { multiAccountViewModel.remove(DownloadPlatform.GUANGYA, it) },
-            onAddAccount = { onAddAccount(DownloadPlatform.GUANGYA) },
-            onDismiss = { showGuangYaSheet = false }
-        )
-    }
 
     // 已登录蓝奏优享：点击卡片弹出账号信息底部弹窗（含多账号管理）
     val ilanzouAccounts by multiAccountViewModel.accountsOf(DownloadPlatform.ILANZOU).collectAsState()

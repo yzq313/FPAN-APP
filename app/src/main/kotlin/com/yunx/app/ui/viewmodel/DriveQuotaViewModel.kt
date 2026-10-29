@@ -21,12 +21,8 @@ package com.yunx.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.yunx.app.data.db.GuangYaAccountEntity
 import com.yunx.app.data.db.ILanzouAccountEntity
 import com.yunx.app.data.network.BaiduApi
-import com.yunx.app.data.network.C139Api
-import com.yunx.app.data.network.GuangYaApi
-import com.yunx.app.data.network.GuangYaDevice
 import com.yunx.app.data.network.ILanzouApi
 import com.yunx.app.data.network.Pan115Api
 import com.yunx.app.data.network.Pan123Api
@@ -55,14 +51,10 @@ class DriveQuotaViewModel(
     private val xunleiCaptcha: suspend () -> String?,
     private val baiduApi: BaiduApi,
     private val baiduCookie: suspend () -> String?,
-    private val c139Api: C139Api,
-    private val c139Cookie: suspend () -> String?,
     private val pan123Api: Pan123Api,
     private val pan123Token: suspend () -> String?,
     private val pan115Api: Pan115Api,
     private val pan115Cookie: suspend () -> String?,
-    private val guangyaApi: GuangYaApi,
-    private val guangyaAccount: suspend () -> GuangYaAccountEntity?,
     private val ilanzouApi: ILanzouApi,
     private val ilanzouAccount: suspend () -> ILanzouAccountEntity?
 ) : ViewModel() {
@@ -79,17 +71,11 @@ class DriveQuotaViewModel(
     private val _baiduQuota = MutableStateFlow<QuotaInfo?>(null)
     val baiduQuota: StateFlow<QuotaInfo?> = _baiduQuota.asStateFlow()
 
-    private val _c139Quota = MutableStateFlow<QuotaInfo?>(null)
-    val c139Quota: StateFlow<QuotaInfo?> = _c139Quota.asStateFlow()
-
     private val _pan123Quota = MutableStateFlow<QuotaInfo?>(null)
     val pan123Quota: StateFlow<QuotaInfo?> = _pan123Quota.asStateFlow()
 
     private val _pan115Quota = MutableStateFlow<QuotaInfo?>(null)
     val pan115Quota: StateFlow<QuotaInfo?> = _pan115Quota.asStateFlow()
-
-    private val _guangyaQuota = MutableStateFlow<QuotaInfo?>(null)
-    val guangyaQuota: StateFlow<QuotaInfo?> = _guangyaQuota.asStateFlow()
 
     private val _ilanzouQuota = MutableStateFlow<QuotaInfo?>(null)
     val ilanzouQuota: StateFlow<QuotaInfo?> = _ilanzouQuota.asStateFlow()
@@ -133,13 +119,6 @@ class DriveQuotaViewModel(
                         _baiduQuota.value = runCatching { baiduApi.getQuota(bd) }.getOrNull()
                     }
                 }
-                // 139
-                launch {
-                    val c139 = c139Cookie()
-                    if (c139 != null) {
-                        _c139Quota.value = runCatching { c139Api.getQuota(c139) }.getOrNull()
-                    }
-                }
                 // 123
                 launch {
                     val p123 = pan123Token()
@@ -152,15 +131,6 @@ class DriveQuotaViewModel(
                     val p115 = pan115Cookie()
                     if (p115 != null) {
                         _pan115Quota.value = runCatching { pan115Api.getQuota(p115) }.getOrNull()
-                    }
-                }
-                // 光鸭
-                launch {
-                    val gy = guangyaAccount()
-                    if (gy != null && gy.accessToken.isNotBlank()) {
-                        _guangyaQuota.value = runCatching {
-                            guangyaApi.getQuota(gy.accessToken, GuangYaDevice(gy.deviceId, gy.deviceSign))
-                        }.getOrNull()
                     }
                 }
                 // 蓝奏优享
@@ -188,14 +158,10 @@ class DriveQuotaViewModel(
         private val xunleiCaptcha: suspend () -> String?,
         private val baiduApi: BaiduApi,
         private val baiduCookie: suspend () -> String?,
-        private val c139Api: C139Api,
-        private val c139Cookie: suspend () -> String?,
         private val pan123Api: Pan123Api,
         private val pan123Token: suspend () -> String?,
         private val pan115Api: Pan115Api,
         private val pan115Cookie: suspend () -> String?,
-        private val guangyaApi: GuangYaApi,
-        private val guangyaAccount: suspend () -> GuangYaAccountEntity?,
         private val ilanzouApi: ILanzouApi,
         private val ilanzouAccount: suspend () -> ILanzouAccountEntity?
     ) : ViewModelProvider.Factory {
@@ -206,10 +172,8 @@ class DriveQuotaViewModel(
                 ucApi, ucCookie,
                 xunleiApi, xunleiToken, xunleiDeviceId, xunleiCaptcha,
                 baiduApi, baiduCookie,
-                c139Api, c139Cookie,
                 pan123Api, pan123Token,
                 pan115Api, pan115Cookie,
-                guangyaApi, guangyaAccount,
                 ilanzouApi, ilanzouAccount
             ) as T
     }

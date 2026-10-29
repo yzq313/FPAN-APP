@@ -25,12 +25,11 @@ package com.yunx.app.data.network.model
  * `CloudFileSheets` 的有效期选择器与结果显示（`expireLabel`）都以此为准。
  *
  * **各平台接口的有效期语义完全不同，禁止把中性码直接下发给接口**，必须先用本对象转换
- * （2026-10 的 bug：139/百度/123 三个平台把中性码当成了天数，导致「选永久建成 1 天、
+ * （2026-10 的 bug：百度/123 两个平台把中性码当成了天数，导致「选永久建成 1 天、
  * 选其他显示永久/30 天」）：
  *
  * | 平台 | 接口字段 | 真实语义 | 转换 |
  * |---|---|---|---|
- * | 139 | `period` | 天数；永久 = **不传该字段** | [daysOrNull] |
  * | 百度 | `period` | 0/1/7/30；0 = 永久 | [baiduPeriod] |
  * | 123 | `expiration` | 绝对 ISO 时间串（now + 天数）；永久 = 2099 哨兵 | [daysOrNull] |
  * | 迅雷 | `expiration_days` | **字符串** "-1"/"1"/"7"/"30"；-1 = 永久 | [xunleiDays] |
@@ -60,7 +59,7 @@ object ShareExpire {
     const val THIRTY_DAYS = 4
 
     /**
-     * 中性码 → 天数；永久返回 `null`（139 的 `period`、123 的 `expiration` 用）。
+     * 中性码 → 天数；永久返回 `null`（123 的 `expiration` 用）。
      */
     fun daysOrNull(expiredType: Int): Int? = when (expiredType) {
         ONE_DAY -> 1

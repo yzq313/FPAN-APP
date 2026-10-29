@@ -109,7 +109,7 @@ import com.yunx.app.ui.theme.spatialDefault
 import com.yunx.app.ui.theme.spatialFast
 
 /**
- * 123 云盘云盘浏览页（参考 139/百度云盘）：
+ * 123 云盘云盘浏览页（参考百度云盘）：
  * - 目录浏览 + 下拉刷新 + 面包屑回退
  * - 长按多选（批量下载/分享/移动/删除）
  * - 文件/文件夹操作菜单（下载/重命名/移动/分享/删除）

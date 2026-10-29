@@ -111,8 +111,6 @@ import com.yunx.app.ui.resolve.DownloadLinkDialog
 import com.yunx.app.ui.resolve.ShareDetailScreen
 import com.yunx.app.ui.viewmodel.BaiduCloudViewModel
 import com.yunx.app.ui.viewmodel.BookmarkViewModel
-import com.yunx.app.ui.viewmodel.C139CloudViewModel
-import com.yunx.app.ui.viewmodel.GuangYaCloudViewModel
 import com.yunx.app.ui.viewmodel.Pan115CloudViewModel
 import com.yunx.app.ui.viewmodel.Pan123CloudViewModel
 import com.yunx.app.ui.viewmodel.QuarkCloudViewModel
@@ -141,16 +139,12 @@ fun ResolveScreen(
     xunleiCloudViewModel: XunleiCloudViewModel,
     /** 百度网盘云盘浏览 ViewModel（百度分享转存目录选择用） */
     baiduCloudViewModel: BaiduCloudViewModel,
-    /** 139 网盘云盘浏览 ViewModel（139 分享转存目录选择用） */
-    c139CloudViewModel: C139CloudViewModel,
     /** UC 网盘云盘浏览 ViewModel（UC 分享转存目录选择用） */
     ucCloudViewModel: UCCoudViewModel,
     /** 123 云盘浏览 ViewModel（123 分享转存目录选择用） */
     pan123CloudViewModel: Pan123CloudViewModel,
     /** 115 网盘浏览 ViewModel（115 分享转存目录选择用） */
     pan115CloudViewModel: Pan115CloudViewModel,
-    /** 光鸭云盘浏览 ViewModel（光鸭分享转存目录选择用） */
-    guangyaCloudViewModel: GuangYaCloudViewModel,
     /** 收藏 ViewModel：主页快捷方式（已添加到主页的收藏链接）数据源 */
     bookmarkViewModel: BookmarkViewModel,
     /** 打开「收藏网盘链接」页（主页快捷方式区块的「管理」入口） */
@@ -288,11 +282,9 @@ fun ResolveScreen(
             quarkCloudViewModel = quarkCloudViewModel,
             xunleiCloudViewModel = xunleiCloudViewModel,
             baiduCloudViewModel = baiduCloudViewModel,
-            c139CloudViewModel = c139CloudViewModel,
             ucCloudViewModel = ucCloudViewModel,
             pan123CloudViewModel = pan123CloudViewModel,
             pan115CloudViewModel = pan115CloudViewModel,
-            guangyaCloudViewModel = guangyaCloudViewModel,
             scrollBehavior = scrollBehavior,
             listState = detailListState,
             scrollPositions = detailScrollPositions,
@@ -829,10 +821,8 @@ private fun platformShortLabel(platform: String): String? = when (platform) {
     "UC" -> "UC"
     "XUNLEI" -> "迅雷"
     "BAIDU" -> "百度"
-    "C139" -> "139"
     "PAN123" -> "123"
     "PAN115" -> "115"
-    "GUANGYA" -> "光鸭"
     "ILANZOU" -> "优享"
     "LANZOU" -> "蓝奏"
     "GITHUB" -> "GitHub"

@@ -267,7 +267,7 @@ private data class PlatformChip(@DrawableRes val logoRes: Int, val name: String)
 private fun PlatformCard() {
     // GitHub 是「当网盘浏览」的附加项，不算网盘平台，不列进这一组
     val drives = SharePlatform.entries
-        .filter { it !in setOf(SharePlatform.GITHUB, SharePlatform.C139, SharePlatform.GUANGYA) }
+        .filter { it != SharePlatform.GITHUB }
         .map { PlatformChip(it.logoRes(), it.displayName) }
 
     SectionCard {

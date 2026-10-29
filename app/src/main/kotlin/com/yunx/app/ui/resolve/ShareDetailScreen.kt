@@ -108,16 +108,12 @@ import com.yunx.app.ui.items.MultiSelectBar
 import com.yunx.app.ui.preview.PreviewTypes
 import com.yunx.app.ui.screens.AddToBookmarkDialog
 import com.yunx.app.ui.screens.BaiduSaveContent
-import com.yunx.app.ui.screens.C139SaveContent
-import com.yunx.app.ui.screens.GuangYaSaveContent
 import com.yunx.app.ui.screens.Pan115SaveContent
 import com.yunx.app.ui.screens.Pan123SaveContent
 import com.yunx.app.ui.screens.SaveToCloudContent
 import com.yunx.app.ui.screens.UCSaveContent
 import com.yunx.app.ui.screens.XunleiSaveContent
 import com.yunx.app.ui.viewmodel.BaiduCloudViewModel
-import com.yunx.app.ui.viewmodel.C139CloudViewModel
-import com.yunx.app.ui.viewmodel.GuangYaCloudViewModel
 import com.yunx.app.ui.viewmodel.Pan115CloudViewModel
 import com.yunx.app.ui.viewmodel.Pan123CloudViewModel
 import com.yunx.app.ui.viewmodel.QuarkCloudViewModel
@@ -154,16 +150,12 @@ fun ShareDetailScreen(
     xunleiCloudViewModel: XunleiCloudViewModel,
     /** 百度网盘云盘浏览 ViewModel（百度分享转存目录选择用） */
     baiduCloudViewModel: BaiduCloudViewModel,
-    /** 139 网盘云盘浏览 ViewModel（139 分享转存目录选择用） */
-    c139CloudViewModel: C139CloudViewModel,
     /** UC 网盘云盘浏览 ViewModel（UC 分享转存目录选择用） */
     ucCloudViewModel: UCCoudViewModel,
     /** 123 云盘浏览 ViewModel（123 分享转存目录选择用） */
     pan123CloudViewModel: Pan123CloudViewModel,
     /** 115 网盘浏览 ViewModel（115 分享转存目录选择用） */
     pan115CloudViewModel: Pan115CloudViewModel,
-    /** 光鸭云盘浏览 ViewModel（光鸭分享转存目录选择用） */
-    guangyaCloudViewModel: GuangYaCloudViewModel,
     scrollBehavior: TopAppBarScrollBehavior,
     /** 文件列表滚动状态（由上层持有，跨目录切换保留） */
     listState: LazyListState,
@@ -599,11 +591,9 @@ fun ShareDetailScreen(
                 when {
                     viewModel.isSaveXunlei -> XunleiSaveContent(viewModel, xunleiCloudViewModel, onBack)
                     viewModel.isSaveBaidu -> BaiduSaveContent(viewModel, baiduCloudViewModel, onBack)
-                    viewModel.isSaveC139 -> C139SaveContent(viewModel, c139CloudViewModel, onBack)
                     viewModel.isSaveUC -> UCSaveContent(viewModel, ucCloudViewModel, onBack)
                     viewModel.isSavePan123 -> Pan123SaveContent(viewModel, pan123CloudViewModel, onBack)
                     viewModel.isSavePan115 -> Pan115SaveContent(viewModel, pan115CloudViewModel, onBack)
-                    viewModel.isSaveGuangYa -> GuangYaSaveContent(viewModel, guangyaCloudViewModel, onBack)
                     else -> SaveToCloudContent(viewModel, quarkCloudViewModel, onBack)
                 }
             }
@@ -901,7 +891,6 @@ internal fun formatSize(bytes: Long): String {
  * - 夸克 / UC：`updated_at` / `modify_time` —— 13 位毫秒时间戳
  * - 百度：`server_mtime` —— 10 位秒级时间戳
  * - 迅雷：`modified_time` —— ISO 8601（带时区偏移或 Z）
- * - 139：云盘 `updatedAt` ISO 8601；分享 `udTime`/`ctTime` 可能为 yyyyMMddHHmmss
  * - 123：`UpdateAt` —— ISO 8601 或 "yyyy-MM-dd HH:mm:ss"
  */
 private fun parseModifyTimeMillis(raw: String): Long? {

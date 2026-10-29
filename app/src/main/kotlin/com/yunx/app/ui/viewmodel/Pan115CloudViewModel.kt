@@ -54,7 +54,7 @@ sealed interface Pan115CloudUiState {
 }
 
 /**
- * 115 网盘浏览 ViewModel（对齐 123/139 云盘页）：
+ * 115 网盘浏览 ViewModel（对齐其他网盘页）：
  * - 目录浏览（根/子目录/面包屑回退）+ 下拉刷新
  * - 文件操作：下载 / 重命名 / 移动 / 创建分享 / 删除 + 长按多选批量
  * 认证走整串登录 Cookie（[Pan115AccountEntity.cookie]），目录 ID 用 cid（根="0"）；
