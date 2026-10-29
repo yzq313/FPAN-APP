@@ -1,0 +1,110 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.turbodl",
+    "module": "turbodl-core",
+    "version": "0.2.7.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.10.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.9.0"
+          }
+        },
+        {
+          "group": "com.squareup.okhttp3",
+          "module": "okhttp",
+          "version": {
+            "requires": "4.12.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbodl-core-0.2.7.0.jar",
+          "url": "turbodl-core-0.2.7.0.jar",
+          "size": 373881,
+          "sha512": "d2ed1c97fbc519c61bb7d5270480024de46e539622f95cef7c5dc1aeb6cf7623637527a0d971a013ca6fc226156ffe3beb03fc3a640663c54bd50f4eeea77983",
+          "sha256": "020912ee639dd20ff752ff6140081040b3e63dd41fab89d7760599641f0db036",
+          "sha1": "4a8e3aaab311903cd8ab3c126e045ef049bf90da",
+          "md5": "91c7042bd52d4ec6e90ed4ab5d451d6f"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.9.0"
+          }
+        },
+        {
+          "group": "com.squareup.okhttp3",
+          "module": "okhttp",
+          "version": {
+            "requires": "4.12.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbodl-core-0.2.7.0.jar",
+          "url": "turbodl-core-0.2.7.0.jar",
+          "size": 373881,
+          "sha512": "d2ed1c97fbc519c61bb7d5270480024de46e539622f95cef7c5dc1aeb6cf7623637527a0d971a013ca6fc226156ffe3beb03fc3a640663c54bd50f4eeea77983",
+          "sha256": "020912ee639dd20ff752ff6140081040b3e63dd41fab89d7760599641f0db036",
+          "sha1": "4a8e3aaab311903cd8ab3c126e045ef049bf90da",
+          "md5": "91c7042bd52d4ec6e90ed4ab5d451d6f"
+        }
+      ]
+    }
+  ]
+}

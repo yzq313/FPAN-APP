@@ -1,0 +1,117 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.turbodl",
+    "module": "turbo-plugin-parser",
+    "version": "0.2.7.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.10.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbo-plugin-runtime",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-parser-0.2.7.0.jar",
+          "url": "turbo-plugin-parser-0.2.7.0.jar",
+          "size": 50002,
+          "sha512": "6e3fee7de435f69a4c08b4a3322400b1d753c56d6e397f2315964b9cdb2ef1506547008c393ca22d988465ed77b4af8556a422d03d5873f194b7a4da892ce5f6",
+          "sha256": "06b0d4a6cafeae9428d8a9e580b7c454694ae50cfed77b3991b922386048b06a",
+          "sha1": "962be9136ecd2709c5c7a47820a27d1e925a647e",
+          "md5": "2378dc93e62c894cb22fda050c5c8e3b"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.9.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbo-plugin-runtime",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-parser-0.2.7.0.jar",
+          "url": "turbo-plugin-parser-0.2.7.0.jar",
+          "size": 50002,
+          "sha512": "6e3fee7de435f69a4c08b4a3322400b1d753c56d6e397f2315964b9cdb2ef1506547008c393ca22d988465ed77b4af8556a422d03d5873f194b7a4da892ce5f6",
+          "sha256": "06b0d4a6cafeae9428d8a9e580b7c454694ae50cfed77b3991b922386048b06a",
+          "sha1": "962be9136ecd2709c5c7a47820a27d1e925a647e",
+          "md5": "2378dc93e62c894cb22fda050c5c8e3b"
+        }
+      ]
+    }
+  ]
+}

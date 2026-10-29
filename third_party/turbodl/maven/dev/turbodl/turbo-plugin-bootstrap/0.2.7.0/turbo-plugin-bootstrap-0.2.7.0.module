@@ -1,0 +1,110 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.turbodl",
+    "module": "turbo-plugin-bootstrap",
+    "version": "0.2.7.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.10.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbo-plugin-runtime",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-bootstrap-0.2.7.0.jar",
+          "url": "turbo-plugin-bootstrap-0.2.7.0.jar",
+          "size": 9369,
+          "sha512": "4eed444588d7305b621b8e2e03bc7c3ad7c999c3fbcffba1c4295d8a041a16e37c77b7007fa5996c517cc42ce730bf2b2d8a6d93e077043cba185ac9221caf99",
+          "sha256": "e1e798d8efbf168c8819882afb62a0739555959486695f4db93d3720b954d3ea",
+          "sha1": "241996df17d7c5a1a62132ddf8f9c90c812f50a1",
+          "md5": "9ab9412c2574a61e169b61a25e0122f1"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbo-plugin-runtime",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-bootstrap-0.2.7.0.jar",
+          "url": "turbo-plugin-bootstrap-0.2.7.0.jar",
+          "size": 9369,
+          "sha512": "4eed444588d7305b621b8e2e03bc7c3ad7c999c3fbcffba1c4295d8a041a16e37c77b7007fa5996c517cc42ce730bf2b2d8a6d93e077043cba185ac9221caf99",
+          "sha256": "e1e798d8efbf168c8819882afb62a0739555959486695f4db93d3720b954d3ea",
+          "sha1": "241996df17d7c5a1a62132ddf8f9c90c812f50a1",
+          "md5": "9ab9412c2574a61e169b61a25e0122f1"
+        }
+      ]
+    }
+  ]
+}

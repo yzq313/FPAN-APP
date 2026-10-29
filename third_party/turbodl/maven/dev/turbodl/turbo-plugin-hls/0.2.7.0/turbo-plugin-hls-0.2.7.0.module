@@ -1,0 +1,117 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.turbodl",
+    "module": "turbo-plugin-hls",
+    "version": "0.2.7.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.10.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbo-plugin-runtime",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-hls-0.2.7.0.jar",
+          "url": "turbo-plugin-hls-0.2.7.0.jar",
+          "size": 69021,
+          "sha512": "ffb5383b0e2de4f15e5da30549d8a89e2992204f3db304347358fc678de48b5165ddf68badfcb041172457d6f72eb5291e4606de879e677f263e9de93d85d56a",
+          "sha256": "eeca8f06e73414c1812922d30cb93e99eb386c406b0966131c6db4e1e290db07",
+          "sha1": "6ce6121de81949c9768719a67c1da359e6495e02",
+          "md5": "628d3db08e7796e1f46899a844f174a9"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.9.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbo-plugin-runtime",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-hls-0.2.7.0.jar",
+          "url": "turbo-plugin-hls-0.2.7.0.jar",
+          "size": 69021,
+          "sha512": "ffb5383b0e2de4f15e5da30549d8a89e2992204f3db304347358fc678de48b5165ddf68badfcb041172457d6f72eb5291e4606de879e677f263e9de93d85d56a",
+          "sha256": "eeca8f06e73414c1812922d30cb93e99eb386c406b0966131c6db4e1e290db07",
+          "sha1": "6ce6121de81949c9768719a67c1da359e6495e02",
+          "md5": "628d3db08e7796e1f46899a844f174a9"
+        }
+      ]
+    }
+  ]
+}

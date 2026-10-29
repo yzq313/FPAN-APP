@@ -36,6 +36,10 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        maven {
+            url = uri("third_party/turbodl/maven")
+            content { includeGroup("dev.turbodl") }
+        }
         if (System.getenv("YUNX_USE_MIRROR") != "false") {
             maven { url = uri("https://maven.aliyun.com/repository/google") }
             maven { url = uri("https://maven.aliyun.com/repository/public") }

@@ -1,0 +1,124 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.turbodl",
+    "module": "turbo-plugin-js",
+    "version": "0.2.7.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.10.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbo-plugin-runtime",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-js-0.2.7.0.jar",
+          "url": "turbo-plugin-js-0.2.7.0.jar",
+          "size": 222814,
+          "sha512": "d237678dea9a8f476e568b511a14d85a32aa27a6ee5c36f67d21be694047a1ceccc2982bda1aead321896a5ddab5ec98dc75ea9c6091da935f981140342f84ac",
+          "sha256": "7a9d51394d57c1ed63b63ef54f658f52c58ec7f615cddbb03703c56b963b4d00",
+          "sha1": "340a8e4baacfc712d21bbac73511697e423719ed",
+          "md5": "65ee96c477140cef6d268df66164ab61"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.9.0"
+          }
+        },
+        {
+          "group": "io.github.dokar3",
+          "module": "quickjs-kt-jvm",
+          "version": {
+            "requires": "1.0.15"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "dev.turbodl",
+          "module": "turbo-plugin-runtime",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-js-0.2.7.0.jar",
+          "url": "turbo-plugin-js-0.2.7.0.jar",
+          "size": 222814,
+          "sha512": "d237678dea9a8f476e568b511a14d85a32aa27a6ee5c36f67d21be694047a1ceccc2982bda1aead321896a5ddab5ec98dc75ea9c6091da935f981140342f84ac",
+          "sha256": "7a9d51394d57c1ed63b63ef54f658f52c58ec7f615cddbb03703c56b963b4d00",
+          "sha1": "340a8e4baacfc712d21bbac73511697e423719ed",
+          "md5": "65ee96c477140cef6d268df66164ab61"
+        }
+      ]
+    }
+  ]
+}

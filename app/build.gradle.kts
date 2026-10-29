@@ -118,6 +118,9 @@ android {
 }
 
 dependencies {
+    implementation("dev.turbodl:turbodl-core:0.2.7.0")
+    implementation("dev.turbodl:turbo-plugin-bootstrap:0.2.7.0")
+    implementation("dev.turbodl:turbo-plugin-hls:0.2.7.0")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")

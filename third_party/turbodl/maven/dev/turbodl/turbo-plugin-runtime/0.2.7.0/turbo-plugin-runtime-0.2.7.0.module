@@ -1,0 +1,110 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.turbodl",
+    "module": "turbo-plugin-runtime",
+    "version": "0.2.7.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.10.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.9.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-runtime-0.2.7.0.jar",
+          "url": "turbo-plugin-runtime-0.2.7.0.jar",
+          "size": 106978,
+          "sha512": "39324e5e99fbcf1a99f1800a24754b849add91f79ab9727271711ccb8b1c66ca9adfd6af7a66058f91d2f7e1e3880d1e612fa648e3465b9aae66a8f37acf1740",
+          "sha256": "57617d01a5129a1763160a25b63185a54624ef1b7e9a9d2431d1ac4d0f27e3ad",
+          "sha1": "40d0eeaf838faa159c2dd40dd7afa2897395c763",
+          "md5": "796c55be1dfca101a6e54f646f37fad5"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.turbodl",
+          "module": "turbodl-core",
+          "version": {
+            "requires": "0.2.7.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.9.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "turbo-plugin-runtime-0.2.7.0.jar",
+          "url": "turbo-plugin-runtime-0.2.7.0.jar",
+          "size": 106978,
+          "sha512": "39324e5e99fbcf1a99f1800a24754b849add91f79ab9727271711ccb8b1c66ca9adfd6af7a66058f91d2f7e1e3880d1e612fa648e3465b9aae66a8f37acf1740",
+          "sha256": "57617d01a5129a1763160a25b63185a54624ef1b7e9a9d2431d1ac4d0f27e3ad",
+          "sha1": "40d0eeaf838faa159c2dd40dd7afa2897395c763",
+          "md5": "796c55be1dfca101a6e54f646f37fad5"
+        }
+      ]
+    }
+  ]
+}

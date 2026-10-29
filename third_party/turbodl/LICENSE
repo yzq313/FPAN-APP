@@ -1,0 +1,57 @@
+MIT License
+
+Copyright (c) 2026 jiayuxuan123 and TurboDL contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+SUPPLEMENTAL TERMS (追加条款) — 面向插件生态
+--------------------------------------------------------------------------------
+
+These supplemental terms clarify, and do not restrict, the rights granted by
+the MIT License above. In case of any conflict, the MIT License prevails.
+
+以下追加条款用于澄清（而非限制）上述 MIT 许可授予的权利；如有冲突，以 MIT 许可为准。
+
+1. Plugin Independence / 插件独立性
+   Plugins, extensions, adapters, and shims that merely depend on, link against,
+   or interact with TurboDL through its public APIs and extension points are
+   independent works. They may be licensed under any terms their authors choose
+   and are NOT considered derivative works of TurboDL solely by such use.
+   仅通过 TurboDL 的公开 API 与扩展点依赖、链接或交互的插件、扩展、适配器与垫片，
+   属于独立作品，可由其作者自行选择任意许可，不因此类使用而被视为 TurboDL 的衍生作品。
+
+2. Third-Party Ecosystem Interop / 第三方生态互操作
+   Adapter/shim plugins that translate between TurboDL extension points and
+   third-party download ecosystems are permitted. Such interoperability does not
+   grant any rights to the third-party software; users must independently comply
+   with the licenses of any third-party components they choose to interoperate with.
+   允许编写在 TurboDL 扩展点与第三方下载生态之间做接口翻译的适配器/垫片插件。
+   该互操作不授予对第三方软件的任何权利；用户须自行遵守其所对接第三方组件的许可。
+
+3. Attribution for Design Inspiration / 设计致谢
+   TurboDL's engine design was informed by the ideas of several open-source
+   download managers WITHOUT copying their source code. No endorsement by those
+   projects is implied.
+   TurboDL 的引擎设计参考了多个开源下载器的思想，但未复制其源码；不暗示这些项目的任何背书。
+
+4. No Trademark Rights / 商标
+   These licenses do not grant rights to use the names, logos, or trademarks of
+   TurboDL, its authors, or any referenced third-party project.
+   本许可不授予使用 TurboDL、其作者或任何被引用第三方项目的名称、标识或商标的权利。
