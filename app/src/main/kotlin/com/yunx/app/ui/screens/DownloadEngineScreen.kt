@@ -242,7 +242,7 @@ fun DownloadEngineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             // （页面顶部就是这么写的）。它们跑完后引擎会空转着，直到进程结束或用户点「重启引擎」。
             // 这也是 UI 里不再有「启动/停止引擎」的原因：唯一还需要停一下的地方是「删除内核」
             // （uninstall 不允许在运行中删），那里自己会把引擎停掉。
-            notice = "已切换到内置分片下载器"
+            notice = if (value == SettingsRepository.ENGINE_TURBO) "已切换到 TurboDL" else "已切换到内置分片下载器"
         }
     }
 
@@ -366,7 +366,7 @@ fun DownloadEngineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                                 icon = Icons.Outlined.Download,
                                 title = "内置分片下载器",
                                 badge = null,
-                                highlighted = !engineOn
+                                highlighted = engineChoice == SettingsRepository.ENGINE_BUILTIN
                             )
                             Text(
                                 "项目自带的下载器：按网盘分片并发、断点续传，保存位置走系统 SAF / MediaStore" +
@@ -375,10 +375,10 @@ fun DownloadEngineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             EngineActionButton(
-                                selected = !engineOn,
+                                selected = engineChoice == SettingsRepository.ENGINE_BUILTIN,
                                 icon = Icons.Outlined.SwapHoriz,
-                                label = if (engineOn) "切换到此引擎" else "使用中",
-                                enabled = engineOn,
+                                label = if (engineChoice == SettingsRepository.ENGINE_BUILTIN) "使用中" else "切换到此引擎",
+                                enabled = engineChoice != SettingsRepository.ENGINE_BUILTIN,
                                 onClick = { chooseEngine(SettingsRepository.ENGINE_BUILTIN) }
                             )
                         }
@@ -388,6 +388,35 @@ fun DownloadEngineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp)
                                 .height(1.dp)
+                                .background(MaterialTheme.colorScheme.outlineVariant)
+                        )
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            EngineSectionHeader(
+                                icon = Icons.Outlined.Download,
+                                title = "TurboDL",
+                                badge = "实验性",
+                                highlighted = engineChoice == SettingsRepository.ENGINE_TURBO
+                            )
+                            Text(
+                                "支持普通链接和 HLS 下载，特殊处理任务仍使用内置下载器。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            EngineActionButton(
+                                selected = engineChoice == SettingsRepository.ENGINE_TURBO,
+                                icon = Icons.Outlined.SwapHoriz,
+                                label = if (engineChoice == SettingsRepository.ENGINE_TURBO) "使用中" else "切换到此引擎",
+                                enabled = engineChoice != SettingsRepository.ENGINE_TURBO,
+                                onClick = { chooseEngine(SettingsRepository.ENGINE_TURBO) }
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp)
                                 .background(MaterialTheme.colorScheme.outlineVariant)
                         )
 

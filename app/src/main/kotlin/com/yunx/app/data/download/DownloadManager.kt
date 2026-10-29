@@ -29,6 +29,11 @@ import com.yunx.app.data.prefs.SettingsRepository
 import com.yunx.app.data.security.CredentialCipher
 import com.yunx.app.data.security.PlaintextCredentialCipher
 import com.yunx.app.data.network.HttpClients
+import dev.turbodl.core.DownloadRequest
+import dev.turbodl.core.TaskState
+import dev.turbodl.core.TurboConfig
+import dev.turbodl.plugin.bootstrap.TurboBootstrap
+import dev.turbodl.plugin.hls.HlsPlugin
 import okhttp3.Request
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -36,10 +41,12 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -783,6 +790,12 @@ class DownloadManager(
             // 任务登记、下载页展示、完成清理回调都与内置下载器完全一致，只有「执行」交给 Gopeed 引擎
             startViaEngine(id, url, safeName, headers, taskPlatform)
         } else {
+            if (settings.downloadEngine == SettingsRepository.ENGINE_TURBO && !isMagnet &&
+                mergeAudioUrl.isBlank() && motionUrl.isBlank() && fallbackUrl.isBlank() && altSources.isEmpty()
+            ) {
+                val dir = chunkDirOf(id).apply { mkdirs() }
+                File(dir, "engine-turbodl").writeText("0.2.7.0")
+            }
             start(id, headers)
         }
         return id
@@ -1459,6 +1472,11 @@ class DownloadManager(
             return
         }
 
+        if (File(chunkDirOf(id), "engine-turbodl").isFile) {
+            turboDownload(id, task, headers)
+            return
+        }
+
         // HLS（m3u8 转码流，如 UC play）：不走 Range 分片，直接拉分片合并
         if (task.url.contains(".m3u8", true) || task.url.contains(".m3u", true)) {
             Log.d(TAG, "runTask: id=$id HLS 转码流下载 origin=${LogRedactor.url(task.url)}")
@@ -1934,6 +1952,59 @@ class DownloadManager(
         }
         Log.d(TAG, "runTask: id=$id 所有区间完成，开始合并")
         finishDownload(id, chunkDir, finalChunkFiles(chunkDir, mainPoolCount), task.fileName, total)
+    }
+
+    private suspend fun turboDownload(id: Long, task: DownloadTaskEntity, headers: Map<String, String>) = coroutineScope {
+        val dir = chunkDirOf(id).apply { mkdirs() }
+        val output = File(dir, "turbo-output.part")
+        val bootstrap = TurboBootstrap.create(
+            config = TurboConfig(
+                workDir = File(dir, "turbo-work"),
+                maxConnectionsPerTask = threadProvider(task.platform).coerceIn(1, 256),
+                maxConcurrentTasks = 1,
+                globalSpeedLimitBytesPerSec = speedLimitProvider().coerceAtLeast(0),
+            ),
+            extraPlugins = listOf(HlsPlugin()),
+        )
+        val client = bootstrap.client
+        val turboId = client.submit(DownloadRequest(
+            url = task.url,
+            destination = output,
+            headers = headers,
+            knownSize = taskSizes[id]?.takeIf { it > 0 } ?: -1L,
+            connectionsOverride = threadProvider(task.platform).coerceIn(1, 256),
+            stableKey = "fpan-$id",
+        ))
+        val progressJob = launch {
+            while (isActive) {
+                client.progress.value[turboId]?.let { p ->
+                    val total = p.totalBytes.coerceAtLeast(0)
+                    dao.updateProgress(id, DownloadTaskEntity.STATUS_DOWNLOADING, p.downloadedBytes, total)
+                    _stats.update { it + (id to DownloadStats(p.speedBytesPerSec, p.etaMillis, p.activeConnections)) }
+                }
+                delay(800)
+            }
+        }
+        var finished = false
+        try {
+            val result = client.await(turboId)
+            finished = true
+            result.getOrThrow()
+            progressJob.cancelAndJoin()
+            val size = output.length()
+            finishDownload(id, dir, listOf(output), task.fileName, size)
+        } finally {
+            withContext(NonCancellable) {
+                progressJob.cancelAndJoin()
+                if (!finished) {
+                    client.pause(turboId)
+                    withTimeoutOrNull(15_000) {
+                        while (client.progress.value[turboId]?.state != TaskState.PAUSED) delay(50)
+                    }
+                }
+                bootstrap.shutdown()
+            }
+        }
     }
 
     /** 最终合并文件列表：主池 part_0..part_{n-1}（连续前半段）+ 弹性区 seg_{start}_{end} 按 start 排序（后半段） */

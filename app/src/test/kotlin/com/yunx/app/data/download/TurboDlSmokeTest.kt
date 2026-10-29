@@ -1,6 +1,5 @@
 package com.yunx.app.data.download
 
-import com.sun.net.httpserver.HttpServer
 import dev.turbodl.core.DownloadRequest
 import dev.turbodl.core.TurboConfig
 import dev.turbodl.plugin.bootstrap.TurboBootstrap
@@ -12,7 +11,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.net.InetSocketAddress
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
+import okio.Buffer
 import java.util.concurrent.atomic.AtomicBoolean
 
 class TurboDlSmokeTest {
@@ -21,13 +24,14 @@ class TurboDlSmokeTest {
     @Test fun downloadsWithRequestHeaders() = runBlocking {
         val bytes = "FPAN TurboDL test".toByteArray()
         val sawHeader = AtomicBoolean(false)
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/file") { exchange ->
-            if (exchange.requestHeaders.getFirst("X-Test-Token") == "expected") {
-                sawHeader.set(true)
+        val server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.getHeader("X-Test-Token") == "expected") {
+                    sawHeader.set(true)
+                }
+                return MockResponse().setBody(Buffer().write(bytes))
             }
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
         }
         server.start()
         val bootstrap = TurboBootstrap.create(
@@ -37,7 +41,7 @@ class TurboDlSmokeTest {
         try {
             val output = temporaryFolder.newFile("output")
             val id = bootstrap.client.submit(DownloadRequest(
-                url = "http://127.0.0.1:${server.address.port}/file",
+                url = server.url("/file").toString(),
                 destination = output,
                 headers = mapOf("X-Test-Token" to "expected"),
                 connectionsOverride = 1,
@@ -48,7 +52,7 @@ class TurboDlSmokeTest {
             assertArrayEquals(bytes, output.readBytes())
         } finally {
             bootstrap.shutdown()
-            server.stop(0)
+            server.shutdown()
         }
     }
 }

@@ -121,7 +121,7 @@ class SettingsRepository(context: Context) {
      */
     var downloadEngine: String
         get() = prefs.getString("download_engine", ENGINE_BUILTIN)?.takeIf {
-            it == ENGINE_BUILTIN || it == ENGINE_GOPEED
+            it == ENGINE_BUILTIN || it == ENGINE_GOPEED || it == ENGINE_TURBO
         } ?: ENGINE_BUILTIN
         set(value) {
             prefs.edit().putString("download_engine", value).apply()
@@ -315,6 +315,7 @@ class SettingsRepository(context: Context) {
 
         /** 下载引擎标识：内置 Gopeed 引擎（gomobile 核心，需用户导入 AAR） */
         const val ENGINE_GOPEED = "gopeed"
+        const val ENGINE_TURBO = "turbodl"
         /**
          * 线程数上限 = 512（与设置页档位一致）。
          * 真正同时在飞的请求数另由 `DownloadManager.MAX_INFLIGHT_CHUNKS`（按最大堆预算推导、同样封顶 512）
