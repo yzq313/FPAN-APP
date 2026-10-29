@@ -31,7 +31,6 @@ class ShareLinkParserTest {
             "https://drive.uc.cn/s/Abc123" to (SharePlatform.UC to "Abc123"),
             "https://pan.xunlei.com/s/Abc_123-xy" to (SharePlatform.XUNLEI to "Abc_123-xy"),
             "https://pan.baidu.com/s/1Abc_123-xy?pwd=9xYz" to (SharePlatform.BAIDU to "Abc_123-xy"),
-            "https://yun.139.com/shareweb/#/w/i/Abc_123" to (SharePlatform.C139 to "Abc_123"),
             "https://www.123pan.com/s/2785Vv-T4Ded" to (SharePlatform.PAN123 to "2785Vv-T4Ded"),
             "https://115.com/s/swz54f736y2?password=y118" to (SharePlatform.PAN115 to "swz54f736y2")
         )
@@ -69,12 +68,7 @@ class ShareLinkParserTest {
     }
 
     @Test
-    fun parsesGuangyaAndLanzouWithoutMisjudgingILanzou() {
-        // 光鸭：https://www.guangyapan.com/s/{shareId}
-        val guangya = ShareLinkParser.parse("https://www.guangyapan.com/s/Share123")!!
-        assertEquals(SharePlatform.GUANGYA, guangya.platform)
-        assertEquals("Share123", guangya.shareId)
-
+    fun parsesLanzouWithoutMisjudgingILanzou() {
         // 蓝奏云域名族 lanzou*/lan[zs]o[ux]：子域、文件分享(i...)、文件夹分享(b...)与提取码
         val lanzouSub = ShareLinkParser.parse("https://wwx.lanzoui.com/iAbc123")!!
         assertEquals(SharePlatform.LANZOU, lanzouSub.platform)
@@ -90,5 +84,11 @@ class ShareLinkParserTest {
         assertEquals("Abc123", ilanzou.shareId)
         val ilanzouBare = ShareLinkParser.parse("https://ilanzou.com/s/Abc123")!!
         assertEquals(SharePlatform.ILANZOU, ilanzouBare.platform)
+    }
+
+    @Test
+    fun rejectsRemovedProviders() {
+        assertNull(ShareLinkParser.parse("https://yun.139.com/shareweb/#/w/i/Abc_123"))
+        assertNull(ShareLinkParser.parse("https://www.guangyapan.com/s/Share123"))
     }
 }

@@ -26,10 +26,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.yunx.app.data.download.DownloadManager
-import com.yunx.app.data.download.DownloadPlatform
 import com.yunx.app.data.network.GuangYaApi
 import com.yunx.app.data.network.GuangYaConstants
-import com.yunx.app.data.network.model.DownloadLink
 import com.yunx.app.data.network.model.ShareExpire
 import com.yunx.app.data.network.model.ShareFile
 import com.yunx.app.data.network.model.ShareInfo
@@ -74,12 +72,7 @@ class GuangYaCloudViewModel(
         private set
     var isOperating by mutableStateOf(false)
         private set
-    var folderProgress by mutableStateOf<String?>(null)
-        private set
-    private var downloadCancelRequested = false
     var refreshing by mutableStateOf(false)
-        private set
-    var downloadTriggered by mutableStateOf(0)
         private set
     var shareResult by mutableStateOf<ShareInfo?>(null)
         private set
@@ -87,10 +80,6 @@ class GuangYaCloudViewModel(
         private set
     private val _selected = mutableStateListOf<ShareFile>()
     val selected: List<ShareFile> get() = _selected
-
-    var downloadLink by mutableStateOf<DownloadLink?>(null)
-        private set
-    private var pendingDownload: PendingDownload? = null
 
     private val dirStack = ArrayDeque<String>()
     private val nameStack = ArrayDeque<String>()
@@ -186,14 +175,6 @@ class GuangYaCloudViewModel(
         shareResult = null
     }
 
-    fun consumeDownloadTriggered() {
-        downloadTriggered = 0
-    }
-
-    fun cancelDownload() {
-        downloadCancelRequested = true
-    }
-
     // ---------- 移动目标浏览 ----------
 
     fun openMoveRoot() {
@@ -236,127 +217,6 @@ class GuangYaCloudViewModel(
     }
 
     // ---------- 单文件操作 ----------
-
-    private fun downloadHeaders(): Map<String, String> = mapOf(
-        "User-Agent" to GuangYaConstants.WEB_UA,
-        "Referer" to GuangYaConstants.DOWNLOAD_REFERER
-    )
-
-    private suspend fun collectFolderFiles(
-        dirId: String,
-        prefix: String,
-        tk: String,
-        result: MutableList<Pair<ShareFile, String>>,
-        depth: Int
-    ) {
-        if (depth > 12) return
-        val list = runCatching { api.listCloudFiles(tk, dirId) }.getOrDefault(emptyList())
-        list.filter { !it.isdir }.forEach { result.add(it to "$prefix/${it.fname}") }
-        list.filter { it.isdir }.forEach {
-            collectFolderFiles(it.fid, "$prefix/${it.fname}", tk, result, depth + 1)
-        }
-    }
-
-    fun downloadFolder() {
-        val folder = actionFile ?: return
-        if (!folder.isdir) return
-        viewModelScope.launch {
-            isOperating = true
-            folderProgress = "正在收集文件…"
-            downloadCancelRequested = false
-            try {
-                val tk = token()
-                val tasks = mutableListOf<Pair<ShareFile, String>>()
-                collectFolderFiles(folder.fid, folder.fname, tk, tasks, 0)
-                if (tasks.isEmpty()) {
-                    cloudMessage = "文件夹为空"
-                    actionFile = null
-                    return@launch
-                }
-                var okCount = 0
-                tasks.forEachIndexed { index, (file, relPath) ->
-                    if (downloadCancelRequested) return@forEachIndexed
-                    folderProgress = "正在加入下载 ${index + 1}/${tasks.size}"
-                    runCatching {
-                        val link = api.getDownloadLink(tk, file) ?: return@runCatching
-                        downloadManager.enqueue(
-                            url = link.downloadUrl,
-                            fileName = relPath,
-                            size = link.size,
-                            platform = DownloadPlatform.GUANGYA,
-                            headers = downloadHeaders()
-                        )
-                        okCount++
-                    }
-                }
-                if (downloadCancelRequested) {
-                    cloudMessage = "已中断下载"
-                    actionFile = null
-                    return@launch
-                }
-                cloudMessage = "已加入 $okCount 个下载任务"
-                actionFile = null
-            } catch (e: Exception) {
-                cloudMessage = e.message ?: "下载文件夹失败"
-            } finally {
-                isOperating = false
-                folderProgress = null
-                downloadCancelRequested = false
-            }
-        }
-    }
-
-    fun downloadFile() {
-        val file = actionFile ?: return
-        viewModelScope.launch {
-            isOperating = true
-            try {
-                val link = api.getDownloadLink(token(), file)
-                    ?: throw IllegalStateException("获取下载链接失败")
-                pendingDownload = PendingDownload(
-                    url = link.downloadUrl,
-                    fileName = file.fname.ifBlank { link.filename },
-                    size = link.size,
-                    headers = downloadHeaders()
-                )
-                downloadLink = link
-            } catch (e: Exception) {
-                cloudMessage = e.message ?: "下载失败"
-            } finally {
-                isOperating = false
-            }
-        }
-    }
-
-    fun startDownload() {
-        val pd = pendingDownload ?: return
-        downloadLink = null
-        pendingDownload = null
-        viewModelScope.launch {
-            isOperating = true
-            try {
-                downloadManager.enqueue(
-                    url = pd.url,
-                    fileName = pd.fileName,
-                    size = pd.size,
-                    platform = DownloadPlatform.GUANGYA,
-                    headers = pd.headers
-                )
-                cloudMessage = "已加入下载：${pd.fileName}"
-                actionFile = null
-                downloadTriggered++
-            } catch (e: Exception) {
-                cloudMessage = e.message ?: "下载失败"
-            } finally {
-                isOperating = false
-            }
-        }
-    }
-
-    fun dismissDownloadDialog() {
-        downloadLink = null
-        pendingDownload = null
-    }
 
     fun renameFile(newName: String) {
         val file = actionFile ?: return
@@ -450,61 +310,6 @@ class GuangYaCloudViewModel(
     }
 
     // ---------- 批量操作 ----------
-
-    fun downloadSelected() {
-        val files = _selected.toList()
-        if (files.isEmpty()) return
-        viewModelScope.launch {
-            isOperating = true
-            folderProgress = "正在收集文件…"
-            downloadCancelRequested = false
-            try {
-                val tk = token()
-                val tasks = mutableListOf<Pair<ShareFile, String>>()
-                for (file in files) {
-                    if (file.isdir) {
-                        collectFolderFiles(file.fid, file.fname, tk, tasks, 0)
-                    } else {
-                        tasks.add(file to file.fname)
-                    }
-                }
-                if (tasks.isEmpty()) {
-                    cloudMessage = "所选文件夹为空"
-                    exitMultiSelect()
-                    return@launch
-                }
-                var okCount = 0
-                tasks.forEachIndexed { index, (file, relPath) ->
-                    if (downloadCancelRequested) return@forEachIndexed
-                    folderProgress = "正在加入下载 ${index + 1}/${tasks.size}"
-                    runCatching {
-                        val link = api.getDownloadLink(tk, file) ?: return@runCatching
-                        downloadManager.enqueue(
-                            url = link.downloadUrl,
-                            fileName = if (relPath.contains('/')) relPath else file.fname.ifBlank { link.filename },
-                            size = link.size,
-                            platform = DownloadPlatform.GUANGYA,
-                            headers = downloadHeaders()
-                        )
-                        okCount++
-                    }
-                }
-                if (downloadCancelRequested) {
-                    cloudMessage = "已中断批量下载"
-                    exitMultiSelect()
-                    return@launch
-                }
-                cloudMessage = "已加入 $okCount 个下载任务"
-                exitMultiSelect()
-            } catch (e: Exception) {
-                cloudMessage = e.message ?: "批量下载失败"
-            } finally {
-                isOperating = false
-                folderProgress = null
-                downloadCancelRequested = false
-            }
-        }
-    }
 
     fun shareSelected(expiredType: Int, sharePwd: String?) {
         val files = _selected.toList()

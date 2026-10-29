@@ -136,8 +136,8 @@ private val defaultExpireOptions = listOf(
 internal fun FileActionSheet(
     file: ShareFile,
     operating: Boolean,
-    onDownload: () -> Unit,
-    onDownloadFolder: () -> Unit,
+    onDownload: (() -> Unit)?,
+    onDownloadFolder: (() -> Unit)?,
     onShare: (withPassword: Boolean, passcode: String, expiredType: Int) -> Unit,
     onRename: (String) -> Unit,
     /** 确认删除后执行（页面的 deleteFile()）：确认步骤在本弹窗内部完成 */
@@ -161,11 +161,10 @@ internal fun FileActionSheet(
             when (current) {
                 ActionStep.MENU -> ActionMenu(
                     file = file,
-                    onDownload = {
-                        onDownload()
-                        onDismiss()
+                    onDownload = onDownload?.let { download ->
+                        { download(); onDismiss() }
                     },
-                    onDownloadFolder = if (file.isdir) {
+                    onDownloadFolder = if (onDownloadFolder != null && file.isdir) {
                         {
                             onDownloadFolder()
                             onDismiss()
@@ -373,7 +372,7 @@ internal fun CreateFolderDialog(
 @Composable
 private fun ActionMenu(
     file: ShareFile,
-    onDownload: () -> Unit,
+    onDownload: (() -> Unit)?,
     onDownloadFolder: (() -> Unit)? = null,
     onShare: () -> Unit,
     onMove: () -> Unit,
@@ -394,7 +393,7 @@ private fun ActionMenu(
         Spacer(modifier = Modifier.height(8.dp))
 
         // 操作项
-        if (!file.isdir) {
+        if (!file.isdir && onDownload != null) {
             ActionItem(
                 icon = Icons.Outlined.Download,
                 title = "下载",
@@ -1087,7 +1086,7 @@ internal enum class BatchStep { MENU, SHARE, MOVE }
 internal fun BatchActionSheet(
     count: Int,
     operating: Boolean,
-    onDownload: () -> Unit,
+    onDownload: (() -> Unit)?,
     onShare: (withPassword: Boolean, passcode: String, expiredType: Int) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
@@ -1110,9 +1109,8 @@ internal fun BatchActionSheet(
             when (current) {
                 BatchStep.MENU -> BatchMenu(
                     count = count,
-                    onDownload = {
-                        onDownload()
-                        onDismiss()
+                    onDownload = onDownload?.let { download ->
+                        { download(); onDismiss() }
                     },
                     onShare = { step = BatchStep.SHARE },
                     onMove = { step = BatchStep.MOVE },
@@ -1142,7 +1140,7 @@ internal fun BatchActionSheet(
 @Composable
 private fun BatchMenu(
     count: Int,
-    onDownload: () -> Unit,
+    onDownload: (() -> Unit)?,
     onShare: () -> Unit,
     onMove: () -> Unit,
     onDelete: () -> Unit
@@ -1187,13 +1185,15 @@ private fun BatchMenu(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(8.dp))
 
-        ActionItem(
-            icon = Icons.Outlined.Download,
-            title = "下载",
-            desc = "批量下载到本机",
-            tint = MaterialTheme.colorScheme.primary,
-            onClick = onDownload
-        )
+        if (onDownload != null) {
+            ActionItem(
+                icon = Icons.Outlined.Download,
+                title = "下载",
+                desc = "批量下载到本机",
+                tint = MaterialTheme.colorScheme.primary,
+                onClick = onDownload
+            )
+        }
         ActionItem(
             icon = Icons.Outlined.Share,
             title = "分享",

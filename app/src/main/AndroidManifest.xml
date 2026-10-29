@@ -142,21 +142,6 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- 139（和彩云）：yun.139.com/shareweb/.../w/i/xxx -->
-        <activity-alias
-            android:name="com.yunx.app.link.C139Link"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.ComposeEmptyActivity"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="yun.139.com" android:pathPrefix="/shareweb/" />
-            </intent-filter>
-        </activity-alias>
-
         <!-- 123 云盘：www.123pan.com/s/xxx、www.123865.com/s/xxx、www.123pan.cn/s/xxx、<UID>.share.123pan.cn/123pan/xxx
              四种形态路径规则不同，必须一个 <data> 一条 intent-filter —— 同一 filter 内的多条 <data> 会被
              并成「scheme/host/path 三个集合求交」，路径会串到别的 host 上。 -->
@@ -217,21 +202,6 @@
                 <data android:scheme="https" android:host="115.com" android:pathPrefix="/sw" />
                 <data android:scheme="https" android:host="115cdn.com" android:pathPrefix="/sw" />
                 <data android:scheme="https" android:host="115rc.com" android:pathPrefix="/sw" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- 光鸭云盘：www.guangyapan.com/s/xxx -->
-        <activity-alias
-            android:name="com.yunx.app.link.GuangyaLink"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.ComposeEmptyActivity"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="www.guangyapan.com" android:pathPrefix="/s/" />
             </intent-filter>
         </activity-alias>
 

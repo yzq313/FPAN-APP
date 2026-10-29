@@ -269,7 +269,7 @@ private data class PlatformChip(@DrawableRes val logoRes: Int, val name: String)
 private fun PlatformCard() {
     // GitHub 是「当网盘浏览」的附加项，不算网盘平台，不列进这一组
     val drives = SharePlatform.entries
-        .filter { it != SharePlatform.GITHUB }
+        .filter { it !in setOf(SharePlatform.GITHUB, SharePlatform.C139, SharePlatform.GUANGYA) }
         .map { PlatformChip(it.logoRes(), it.displayName) }
     val videos = VideoPlatform.entries.map { PlatformChip(it.logoRes(), it.displayName) }
 
@@ -336,7 +336,7 @@ private fun PlatformChipGroup(label: String, chips: List<PlatformChip>) {
 @Composable
 private fun FeatureCard() {
     val features = listOf(
-        "网盘分享解析" to "夸克 / UC / 迅雷 / 百度 / 139 / 123 / 115 / 光鸭 / 蓝奏云 / 蓝奏云优享版 直链识别",
+        "网盘分享解析" to "夸克 / UC / 迅雷 / 百度 / 123 / 115 / 蓝奏云 / 蓝奏云优享版 直链识别",
         "视频链接解析" to "抖音 / 小红书 / 快手 / 微博 / AcFun 免登录；哔哩哔哩登录后画质更高，Pixiv 未登录只能解析部分公开作品、粘贴浏览器 Cookie 后可解析全部作品",
         "在线预览与播放" to "图片 / 视频 / 音频在线看（自动带请求头），网盘里的文本文件也能打开",
         "音视频合轨" to "哔哩哔哩高清是音视频分轨的，应用内部合轨，不需要额外装 ffmpeg",

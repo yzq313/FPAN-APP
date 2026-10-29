@@ -268,7 +268,7 @@ fun DriveScreen(
     val c139 = DriveAccount(
         id = "c139",
         name = "139网盘",
-        description = c139Account?.nickname ?: "点击登录，支持解析下载",
+        description = c139Account?.nickname ?: "点击登录，管理网盘文件",
         avatarText = "139",
         isLoggedIn = c139Account != null
     )
@@ -289,7 +289,7 @@ fun DriveScreen(
     val guangya = DriveAccount(
         id = "guangya",
         name = "光鸭云盘",
-        description = guangyaAccount?.nickname ?: "点击登录，支持解析下载",
+        description = guangyaAccount?.nickname ?: "点击登录，管理网盘文件",
         avatarText = "光",
         isLoggedIn = guangyaAccount != null
     )
@@ -375,8 +375,7 @@ fun DriveScreen(
         5 -> C139CloudScreen(
             viewModel = c139CloudViewModel,
             scrollBehavior = scrollBehavior,
-            onExit = { showC139Cloud = false },
-            onDownloadStarted = onDownloadStarted
+            onExit = { showC139Cloud = false }
         )
         6 -> Pan123CloudScreen(
             viewModel = pan123CloudViewModel,
@@ -393,8 +392,7 @@ fun DriveScreen(
         8 -> GuangYaCloudScreen(
             viewModel = guangyaCloudViewModel,
             scrollBehavior = scrollBehavior,
-            onExit = { showGuangYaCloud = false },
-            onDownloadStarted = onDownloadStarted
+            onExit = { showGuangYaCloud = false }
         )
         9 -> ILanzouCloudScreen(
             viewModel = ilanzouCloudViewModel,

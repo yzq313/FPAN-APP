@@ -50,7 +50,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Share
@@ -95,7 +94,6 @@ import com.yunx.app.ui.items.MultiSelectAction
 import com.yunx.app.ui.items.MultiSelectBar
 import com.yunx.app.ui.components.ScrollToTopButton
 import com.yunx.app.ui.components.YunXLoading
-import com.yunx.app.ui.resolve.DownloadLinkDialog
 import com.yunx.app.ui.resolve.BackToParentItem
 import com.yunx.app.ui.resolve.CrumbBar
 import com.yunx.app.ui.resolve.ShareFileRow
@@ -121,7 +119,6 @@ fun C139CloudScreen(
     viewModel: C139CloudViewModel,
     scrollBehavior: TopAppBarScrollBehavior,
     onExit: () -> Unit,
-    onDownloadStarted: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -164,22 +161,6 @@ fun C139CloudScreen(
             SnackbarController.show(it)
             viewModel.consumeMessage()
         }
-    }
-
-    LaunchedEffect(viewModel.downloadTriggered) {
-        if (viewModel.downloadTriggered > 0) {
-            viewModel.consumeDownloadTriggered()
-            onDownloadStarted()
-        }
-    }
-
-    // 单文件下载确认弹窗（对齐解析页：展示直链，长按可复制）
-    viewModel.downloadLink?.let { link ->
-        DownloadLinkDialog(
-            link = link,
-            onDownload = { viewModel.startDownload() },
-            onDismiss = { viewModel.dismissDownloadDialog() }
-        )
     }
 
     Surface(
@@ -422,9 +403,6 @@ fun C139CloudScreen(
                             busy = viewModel.isOperating,
                             count = viewModel.selected.size,
                             actions = listOf(
-                                MultiSelectAction("下载", Icons.Outlined.Download, MaterialTheme.colorScheme.primary) {
-                                    viewModel.downloadSelected()
-                                },
                                 MultiSelectAction("分享", Icons.Outlined.Share, MaterialTheme.colorScheme.primary) {
                                     batchInitial = BatchStep.SHARE
                                     showBatchActions = true
@@ -465,8 +443,8 @@ fun C139CloudScreen(
         FileActionSheet(
             file = viewModel.actionFile!!,
             operating = viewModel.isOperating,
-            onDownload = { viewModel.downloadFile() },
-            onDownloadFolder = { viewModel.downloadFolder() },
+            onDownload = null,
+            onDownloadFolder = null,
             // 139 的提取码由系统自动生成，不提供自定义入口
             // 139 的提取码由服务端自动生成，不可设置
             passcodeMode = PasscodeMode.SERVER_GENERATED,
@@ -493,7 +471,7 @@ fun C139CloudScreen(
         BatchActionSheet(
             count = viewModel.selected.size,
             operating = viewModel.isOperating,
-            onDownload = { viewModel.downloadSelected() },
+            onDownload = null,
             // 139 的提取码由服务端自动生成，不可设置
             passcodeMode = PasscodeMode.SERVER_GENERATED,
             onShare = { _, _, expiredType -> viewModel.shareSelected(expiredType) },
@@ -532,23 +510,18 @@ fun C139CloudScreen(
         )
     }
 
-    // 操作执行中加载弹窗（下载文件夹/批量下载显示进度）
+    // 操作执行中加载弹窗
     if (viewModel.isOperating) {
         AlertDialog(
             onDismissRequest = { },
             confirmButton = { },
-            dismissButton = {
-                TextButton(onClick = { viewModel.cancelDownload() }) {
-                    Text("中断", color = MaterialTheme.colorScheme.error)
-                }
-            },
             title = { Text("处理中") },
             text = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     YunXLoading(modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = viewModel.folderProgress ?: "正在处理，请稍候…",
+                        text = "正在处理，请稍候…",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }

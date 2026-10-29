@@ -59,7 +59,6 @@ object ShareLinkParser {
     private val ucShareIdRegex = Regex("""drive\.uc\.cn/s/([A-Za-z0-9]+)""", RegexOption.IGNORE_CASE)
     private val xunleiShareIdRegex = Regex("""pan\.xunlei\.com/s/([A-Za-z0-9_-]+)""", RegexOption.IGNORE_CASE)
     private val baiduShareIdRegex = Regex("""pan\.baidu\.com/s/(1[A-Za-z0-9_-]+)""", RegexOption.IGNORE_CASE)
-    private val c139ShareIdRegex = Regex("""yun\.139\.com/shareweb/.*?/w/i/([A-Za-z0-9_-]+)""", RegexOption.IGNORE_CASE)
     // 123 云盘分享链接（抓包 + alist 实践综合，文档 §4.1）：
     // - https://www.123pan.com/s/<ShareKey> / https://www.123865.com/s/<ShareKey>
     // - https://<UID>.share.123pan.cn/123pan/<ShareKey>
@@ -75,8 +74,6 @@ object ShareLinkParser {
     private val pan115ShareIdRegex = Regex("""115(?:cdn|rc)?\.com/s/(sw[A-Za-z0-9]+)""", RegexOption.IGNORE_CASE)
     private val pan115CommandRegex = Regex("""115(?:cdn|rc)?\.com/(sw[A-Za-z0-9]{8,})-([A-Za-z0-9]{4,8})""", RegexOption.IGNORE_CASE)
     private val pwdIn115UrlRegex = Regex("""[?&]password=([A-Za-z0-9]+)""")
-    // 光鸭云盘分享链接（文档 §1.1）：https://www.guangyapan.com/s/{shareId}；shareId 字符集 [A-Za-z0-9_-]+
-    private val guangyaShareIdRegex = Regex("""guangyapan\.com/s/([A-Za-z0-9_-]+)""", RegexOption.IGNORE_CASE)
     // 蓝奏云优享版分享链接（参考实现 wenxi：ilanzou hosts=[ilanzou.com]，share 路径 /s/<id>）。
     // 单独识别为 ILANZOU，避免与蓝奏云混淆；该平台无分享解析接口，解析入口会给出明确提示。
     private val ilanzouShareIdRegex =
@@ -121,12 +118,6 @@ object ShareLinkParser {
                 ?: pwdInTextRegex.find(text)?.groupValues?.getOrNull(1)
             return ParsedShare(shareId = surl, pwd = pwd, platform = SharePlatform.BAIDU)
         }
-        // 139（和彩云）链接：https://yun.139.com/shareweb/#/w/i/{linkID} 提取码 xxxx
-        c139ShareIdRegex.find(url)?.groupValues?.getOrNull(1)?.let { sid ->
-            val pwd = pwdInUrlRegex.find(url)?.groupValues?.getOrNull(1)
-                ?: pwdInTextRegex.find(text)?.groupValues?.getOrNull(1)
-            return ParsedShare(shareId = sid, pwd = pwd, platform = SharePlatform.C139)
-        }
         // 123 云盘链接（3 种形态，按优先级匹配）
         pan123ShareIdRegex.find(url)?.groupValues?.getOrNull(1)?.let { sid ->
             val pwd = pwdInUrlRegex.find(url)?.groupValues?.getOrNull(1)
@@ -156,12 +147,6 @@ object ShareLinkParser {
                 pwd = match.groupValues[2],
                 platform = SharePlatform.PAN115
             )
-        }
-        // 光鸭云盘链接：https://www.guangyapan.com/s/{shareId}（提取码可由 ?pwd= 或文案指定）
-        guangyaShareIdRegex.find(url)?.groupValues?.getOrNull(1)?.let { sid ->
-            val pwd = pwdInUrlRegex.find(url)?.groupValues?.getOrNull(1)
-                ?: pwdInTextRegex.find(text)?.groupValues?.getOrNull(1)
-            return ParsedShare(shareId = sid, pwd = pwd, platform = SharePlatform.GUANGYA)
         }
         // 蓝奏云优享版链接：https://{ilanzou-host}/s/{shareId}（先于蓝奏云判断，避免混淆）
         ilanzouShareIdRegex.find(url)?.groupValues?.getOrNull(1)?.let { sid ->

@@ -49,7 +49,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Search
@@ -86,7 +85,6 @@ import com.yunx.app.ui.items.MultiSelectAction
 import com.yunx.app.ui.items.MultiSelectBar
 import com.yunx.app.ui.components.ScrollToTopButton
 import com.yunx.app.ui.components.YunXLoading
-import com.yunx.app.ui.resolve.DownloadLinkDialog
 import com.yunx.app.ui.resolve.BackToParentItem
 import com.yunx.app.ui.resolve.CrumbBar
 import com.yunx.app.ui.resolve.ShareFileRow
@@ -109,7 +107,6 @@ fun GuangYaCloudScreen(
     viewModel: GuangYaCloudViewModel,
     scrollBehavior: TopAppBarScrollBehavior,
     onExit: () -> Unit,
-    onDownloadStarted: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -145,21 +142,6 @@ fun GuangYaCloudScreen(
             SnackbarController.show(it)
             viewModel.consumeMessage()
         }
-    }
-
-    LaunchedEffect(viewModel.downloadTriggered) {
-        if (viewModel.downloadTriggered > 0) {
-            viewModel.consumeDownloadTriggered()
-            onDownloadStarted()
-        }
-    }
-
-    viewModel.downloadLink?.let { link ->
-        DownloadLinkDialog(
-            link = link,
-            onDownload = { viewModel.startDownload() },
-            onDismiss = { viewModel.dismissDownloadDialog() }
-        )
     }
 
     Surface(
@@ -379,9 +361,6 @@ fun GuangYaCloudScreen(
                             busy = viewModel.isOperating,
                             count = viewModel.selected.size,
                             actions = listOf(
-                                MultiSelectAction("下载", Icons.Outlined.Download, MaterialTheme.colorScheme.primary) {
-                                    viewModel.downloadSelected()
-                                },
                                 MultiSelectAction("分享", Icons.Outlined.Share, MaterialTheme.colorScheme.primary) {
                                     batchInitial = BatchStep.SHARE
                                     showBatchActions = true
@@ -420,8 +399,8 @@ fun GuangYaCloudScreen(
         FileActionSheet(
             file = viewModel.actionFile!!,
             operating = viewModel.isOperating,
-            onDownload = { viewModel.downloadFile() },
-            onDownloadFolder = { viewModel.downloadFolder() },
+            onDownload = null,
+            onDownloadFolder = null,
             onShare = { _, pwd, expiredType -> viewModel.shareFile(expiredType, pwd) },
             onRename = { viewModel.renameFile(it) },
             onConfirmDelete = { viewModel.deleteFile() },
@@ -444,7 +423,7 @@ fun GuangYaCloudScreen(
         BatchActionSheet(
             count = viewModel.selected.size,
             operating = viewModel.isOperating,
-            onDownload = { viewModel.downloadSelected() },
+            onDownload = null,
             onShare = { _, pwd, expiredType -> viewModel.shareSelected(expiredType, pwd) },
             onDelete = {
                 showBatchActions = false
@@ -484,18 +463,13 @@ fun GuangYaCloudScreen(
         AlertDialog(
             onDismissRequest = { },
             confirmButton = { },
-            dismissButton = {
-                TextButton(onClick = { viewModel.cancelDownload() }) {
-                    Text("中断", color = MaterialTheme.colorScheme.error)
-                }
-            },
             title = { Text("处理中") },
             text = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     YunXLoading(modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = viewModel.folderProgress ?: "正在处理，请稍候…",
+                        text = "正在处理，请稍候…",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
