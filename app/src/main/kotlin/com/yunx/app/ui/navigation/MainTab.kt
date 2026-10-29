@@ -32,8 +32,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 /**
  * 主页底部导航的 4 个 Tab：解析 / 账号 / 下载 / 设置。
  *
- * ★ [Drive] 的枚举名不改（它承载的仍是云盘账号页，只是把「视频解析」平台的登录入口也收进了同一页，
- *   所以对外标题从「网盘」改成更准确的「账号」），避免改动 MainScreen 里所有 `MainTab.Drive` 引用。
+ * ★ [Drive] 的枚举名不改（它承载云盘账号管理页，对外标题为「账号」），避免改动 MainScreen 里
+ *   所有 `MainTab.Drive` 引用。
  */
 enum class MainTab(
     val title: String,

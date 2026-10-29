@@ -56,12 +56,6 @@ import com.yunx.app.data.network.XunleiKouling
 import com.yunx.app.data.network.model.DownloadLink
 import com.yunx.app.data.network.model.ShareFile
 import com.yunx.app.data.network.model.ShareSession
-import com.yunx.app.data.network.video.VideoLinkParser
-import com.yunx.app.data.network.video.VideoMedia
-import com.yunx.app.data.network.video.VideoMediaKind
-import com.yunx.app.data.network.video.VideoParseException
-import com.yunx.app.data.network.video.VideoParseResult
-import com.yunx.app.data.network.video.userMessage
 import com.yunx.app.data.update.UpdateChecker
 import com.yunx.app.data.repository.BaiduAccountRepository
 import com.yunx.app.data.repository.BaiduResolveRepository
@@ -84,7 +78,6 @@ import com.yunx.app.data.repository.UCAccountRepository
 import com.yunx.app.data.repository.UCResolveRepository
 import com.yunx.app.data.repository.XunleiAccountRepository
 import com.yunx.app.data.repository.XunleiResolveRepository
-import com.yunx.app.data.repository.VideoParseRepository
 import com.yunx.app.ui.SnackbarController
 import com.yunx.app.ui.preview.PreviewKind
 import com.yunx.app.ui.preview.PreviewLauncher
@@ -104,8 +97,6 @@ sealed interface ResolveUiState {
     data class Detail(val session: ShareSession, val files: List<ShareFile>) : ResolveUiState
     data class Error(val message: String) : ResolveUiState
 
-    /** 视频解析结果（抖音/小红书/快手/微博/AcFun/B站/Pixiv，与网盘流程互不干扰） */
-    data class Video(val result: VideoParseResult) : ResolveUiState
 }
 
 /**
@@ -157,12 +148,6 @@ class ResolveViewModel(
      * 开启后同一个文件用多个账号各取一条直链，分片轮流交给不同直链下载，见 [fetchMultiSources]。
      */
     private val multiSourceDownloadProvider: () -> Boolean = { false },
-    /**
-     * 视频解析仓库（抖音/小红书/快手/微博/AcFun/B站/Pixiv）。
-     * null = 视频解析不可用（仅测试或未注入时）：解析入口会原样退回网盘/GitHub 流程。
-     * 放在构造最后并带默认值，避免破坏既有构造点与测试。
-     */
-    private val videoParseRepository: VideoParseRepository? = null
 ) : ViewModel() {
 
     var uiState by mutableStateOf<ResolveUiState>(ResolveUiState.Idle)
@@ -1019,141 +1004,6 @@ class ResolveViewModel(
         SharePlatform.LANZOU -> "蓝奏云"
         SharePlatform.GITHUB -> "GitHub"
         else -> "夸克网盘"
-    }
-
-    // ---------- 视频解析（抖音/小红书/快手/微博/AcFun/B站/Pixiv） ----------
-
-    /**
-     * 视频解析入口：识别到视频链接就走视频流程，识别不到则原样退回网盘/GitHub 解析。
-     * 这样 UI 三条入口（手动输入 / 深链接 / 主页快捷方式）都只需无条件调用本方法。
-     *
-     * @param pwd 网盘分享的提取码：仅在回退到网盘流程时透传，视频流程不使用。
-     */
-    fun startVideoResolve(text: String, pwd: String? = null) {
-        val link = VideoLinkParser.parse(text)
-        val repo = videoParseRepository
-        // 识别不到视频链接 / 未注入视频仓库：退回原有网盘解析（startResolve 内部会先试 GitHub再试网盘）
-        if (link == null || repo == null) {
-            startResolve(text, pwd)
-            return
-        }
-        // 视频结果不涉及网盘会话与凭证，因此**不设置** currentPlatform（那是网盘枚举）。
-        // 需要展示「当前平台」文案时，UI 直接用 result.platform.displayName。
-        viewModelScope.launch {
-            uiState = ResolveUiState.Loading
-            try {
-                val result = repo.parse(link)
-                // 解析成功但内容有降级（如小红书去水印原图不可用、已回退到平台地址）：弹一次非致命提示
-                result.notice.takeIf { it.isNotBlank() }?.let { SnackbarController.show(it) }
-                uiState = ResolveUiState.Video(result)
-            } catch (e: VideoParseException) {
-                uiState = ResolveUiState.Error(e.userMessage())
-            } catch (e: Exception) {
-                uiState = ResolveUiState.Error("解析失败，请稍后重试")
-            }
-        }
-    }
-
-    /**
-     * 下载单个视频媒体。
-     * HLS 无需特殊处理：[DownloadManager] 按 URL 是否含 `.m3u8` 自动走 HLS 路径。
-     */
-    fun downloadVideoMedia(media: VideoMedia) {
-        val result = (uiState as? ResolveUiState.Video)?.result ?: return
-        viewModelScope.launch {
-            val index = result.medias.indexOf(media).takeIf { it >= 0 }?.plus(1) ?: 1
-            try {
-                downloadManager.enqueue(
-                    url = media.url,
-                    fileName = media.fileName.ifBlank { videoMediaFileName(result.title, index, media.kind) },
-                    headers = media.headers,
-                    size = media.size,
-                    platform = DownloadPlatform.VIDEO,
-                    // B站 DASH 高清是音视频分离的两路流：带上音轨地址，由下载器下完两轨再合轨
-                    mergeAudioUrl = media.audioUrl,
-                    mergeAudioHeaders = media.audioHeaders,
-                    // 动图（Live Photo）：带上动图资源，由下载器合成为一张「动态照片」
-                    motionUrl = media.motionUrl
-                )
-                downloadStarted = true
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                downloadError = "加入下载任务失败，请稍后重试"
-            }
-        }
-    }
-
-    /**
-     * 一键下载当前视频结果里的全部媒体：逐个入队，结束后用 [downloadError] 给出结果提示
-     * （网盘批量下载同样用它当结果通道），入队成功则触发跳转到下载页。
-     */
-    fun downloadAllVideoMedia() {
-        val result = (uiState as? ResolveUiState.Video)?.result ?: return
-        downloadVideoMedias(result.medias)
-    }
-
-    /**
-     * 批量下载一组媒体（图集的「全部下载」/多选后的「下载所选」共用）。
-     *
-     * ★ **多张时文件名带「作品标题/」前缀**：下载页是按 `fileName` 里的 `/` 把任务收纳成**可折叠的
-     *   文件夹组**（就是网盘「整个文件夹下载」那一套机制，见 `DownloadScreen` 的 `folderGroups`）。
-     *   于是图集批量下载在下载页是**一个分组**，而不是几十张散落各处的图片任务。
-     *   **单张不加前缀** —— 一个只有一张图的「文件夹」没有意义。
-     */
-    fun downloadVideoMedias(medias: List<VideoMedia>) {
-        val result = (uiState as? ResolveUiState.Video)?.result ?: return
-        if (medias.isEmpty()) return
-        val folder = if (medias.size > 1) DownloadPathPolicy.sanitizeName(result.title).take(40) else ""
-        viewModelScope.launch {
-            var okCount = 0
-            var failReason: String? = null
-            try {
-                medias.forEachIndexed { i, media ->
-                    // 序号只用于文件名兜底：优先用解析器给好的 fileName
-                    val index = result.medias.indexOf(media).takeIf { it >= 0 }?.plus(1) ?: (i + 1)
-                    val name = media.fileName.ifBlank {
-                        videoMediaFileName(result.title, index, media.kind)
-                    }
-                    downloadManager.enqueue(
-                        url = media.url,
-                        fileName = if (folder.isBlank()) name else "$folder/$name",
-                        headers = media.headers,
-                        size = media.size,
-                        platform = DownloadPlatform.VIDEO,
-                        // B站 DASH 分轨：音轨一起交给下载器合轨（与逐条下载保持一致，
-                        // 少了这个「全部下载」会下出一个没有声音的视频）
-                        mergeAudioUrl = media.audioUrl,
-                        mergeAudioHeaders = media.audioHeaders,
-                        // 动图同理：不带动图资源就会下成一张不会动的静图
-                        motionUrl = media.motionUrl
-                    )
-                    okCount++
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                failReason = e.message
-            }
-            if (okCount > 0) {
-                downloadError = "已加入 $okCount 个下载任务"
-                downloadStarted = true
-            } else {
-                // 一个都没入队：把原因写出来，不要静默失败
-                downloadError = failReason?.takeIf { it.isNotBlank() } ?: "加入下载任务失败，请稍后重试"
-            }
-        }
-    }
-
-    /** 视频媒体文件名的兜底：`标题_序号.扩展名`（扩展名按媒体类型推断） */
-    private fun videoMediaFileName(title: String, index: Int, kind: VideoMediaKind): String {
-        val ext = when (kind) {
-            VideoMediaKind.VIDEO -> "mp4"
-            VideoMediaKind.IMAGE -> "jpg"
-            VideoMediaKind.AUDIO -> "mp3"
-        }
-        val base = title.ifBlank { "video" }.take(40)
-        return "${base}_${index}.$ext"
     }
 
     /** 开始解析：链接 → token →（密码）→ 根目录列表 */
@@ -2316,8 +2166,6 @@ class ResolveViewModel(
         private val noSaveDownloadProvider: () -> Boolean = { true },
         private val multiAccountDownloadProvider: () -> Boolean = { false },
         private val multiSourceDownloadProvider: () -> Boolean = { false },
-        /** 视频解析仓库；null 时视频解析不可用（入口自动回退网盘/GitHub 流程） */
-        private val videoParseRepository: VideoParseRepository? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -2339,8 +2187,7 @@ class ResolveViewModel(
                 mirrorPrefixProvider,
                 noSaveDownloadProvider,
                 multiAccountDownloadProvider,
-                multiSourceDownloadProvider,
-                videoParseRepository
+                multiSourceDownloadProvider
             ) as T
         }
     }

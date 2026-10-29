@@ -100,7 +100,6 @@ import com.yunx.app.data.db.BookmarkEntity
 import com.yunx.app.data.network.GitHubLinkParser
 import com.yunx.app.data.network.ShareLinkParser
 import com.yunx.app.data.network.SharePlatform
-import com.yunx.app.data.network.video.VideoLinkParser
 import com.yunx.app.ui.SnackbarController
 import com.mikepenz.markdown.m3.Markdown
 import com.yunx.app.ui.components.FileNameText
@@ -188,7 +187,7 @@ fun ResolveScreen(
         link = text
         pwd = shareParsed?.pwd.orEmpty()
         pwdEdited = true
-        viewModel.startVideoResolve(text, shareParsed?.pwd)
+        viewModel.startResolve(text, shareParsed?.pwd)
         onIncomingLinkConsumed()
     }
 
@@ -205,8 +204,7 @@ fun ResolveScreen(
             text.isNotBlank() &&
             text != link &&
             text != ignoredClipboard &&
-            (ShareLinkParser.parse(text) != null || GitHubLinkParser.parse(text) != null ||
-                VideoLinkParser.looksLikeVideoLink(text))
+            (ShareLinkParser.parse(text) != null || GitHubLinkParser.parse(text) != null)
         ) {
             clipboardSuggestion = text
         }
@@ -346,10 +344,7 @@ fun ResolveScreen(
                                         preprocessReadme(md, owner, repo, branch)
                                     }
                                     // 注入自定义图片加载器（OkHttp 自研，无 Coil）
-                                    GitHubMarkdownImageTransformer.mirrorPrefix = remember {
-                                        com.yunx.app.data.prefs.SettingsRepository(context)
-                                            .githubMirrorPrefix?.ifBlank { null }
-                                    }
+                                    GitHubMarkdownImageTransformer.mirrorPrefix = UpdateChecker.MIRROR_PREFIX
                                     // 紧凑字号：与更新说明共用同一份排版（见 ui/components/MarkdownTypography.kt）
                                     val compactTypography = remember { compactMarkdownTypography() }
                                     Markdown(
@@ -377,14 +372,6 @@ fun ResolveScreen(
                     refreshing = viewModel.githubRefreshing
                 )
                 is ResolveUiState.Loading -> LoadingContent()
-                // 视频解析结果：顶部返回与 Detail 一致（回到输入页，输入框内容保留）
-                is ResolveUiState.Video -> VideoResultSection(
-                    result = s.result,
-                    onDownloadMedia = { viewModel.downloadVideoMedia(it) },
-                    onDownloadAll = { viewModel.downloadAllVideoMedia() },
-                    onDownloadSelected = { viewModel.downloadVideoMedias(it) },
-                    onBack = { viewModel.backToInput() }
-                )
                 else -> ResolveInputContent(
                     viewModel = viewModel,
                     scrollBehavior = scrollBehavior,
@@ -414,7 +401,7 @@ fun ResolveScreen(
                             viewModel.startGitHubResolve(github)
                         } else {
                             // 统一入口：先试视频、再试网盘（GitHub 已在上方处理）
-                            viewModel.startVideoResolve(bookmark.link, bookmark.pwd)
+                            viewModel.startResolve(bookmark.link, bookmark.pwd)
                         }
                     },
                     onOpenBookmarks = onOpenBookmarks,
@@ -447,15 +434,12 @@ fun ResolveScreen(
             animatedSuggestion?.let { suggestion ->
                 val shareParsed = ShareLinkParser.parse(suggestion)
                 val githubParsed = GitHubLinkParser.parse(suggestion)
-                val videoParsed = VideoLinkParser.parse(suggestion)
                 val platformName = when {
-                    videoParsed != null -> videoParsed.platform.displayName
                     githubParsed != null -> "GitHub"
                     shareParsed != null -> shareParsed.platform.displayName
                     else -> "网盘"
                 }
                 val platformLogo = when {
-                    videoParsed != null -> videoParsed.platform.logoRes()
                     githubParsed != null -> SharePlatform.GITHUB.logoRes()
                     shareParsed != null -> shareParsed.platform.logoRes()
                     else -> null
@@ -468,8 +452,8 @@ fun ResolveScreen(
                         pwd = shareParsed?.pwd.orEmpty()
                         pwdEdited = true
                         clipboardSuggestion = null
-                        // 统一入口：先试视频、再试 GitHub、最后网盘
-                        viewModel.startVideoResolve(suggestion, shareParsed?.pwd)
+                        // 统一入口：先试 GitHub、最后网盘
+                        viewModel.startResolve(suggestion, shareParsed?.pwd)
                     },
                     onDismiss = {
                         ignoredClipboard = suggestion
@@ -584,7 +568,7 @@ private fun ResolveInputContent(
         Button(
             onClick = {
                 // 统一入口：先试视频、再试 GitHub / 网盘（分流在 ViewModel 内完成）
-                viewModel.startVideoResolve(link, pwd)
+                viewModel.startResolve(link, pwd)
             },
             modifier = Modifier
                 .fillMaxWidth()

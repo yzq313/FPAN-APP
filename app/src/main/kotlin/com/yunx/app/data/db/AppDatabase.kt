@@ -29,6 +29,7 @@ import com.yunx.app.data.security.PlaintextCredentialCipher
 import com.yunx.app.util.DiagnosticLog
 
 @Database(
+    // Keep the retired video_account entity in Room's schema for upgrade compatibility; the app no longer exposes or uses it.
     entities = [QuarkAccountEntity::class, DownloadTaskEntity::class, UCAccountEntity::class, XunleiAccountEntity::class, BaiduAccountEntity::class, C139AccountEntity::class, Pan123AccountEntity::class, Pan115AccountEntity::class, GuangYaAccountEntity::class, ILanzouAccountEntity::class, LanzouAccountEntity::class, BookmarkEntity::class, VideoAccountEntity::class],
     version = 23,
     exportSchema = false
@@ -59,9 +60,6 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun bookmarkDao(): BookmarkDao
 
-    /** 视频解析账号：原始 DAO（未解密包装），对外请用 [videoAccountDao] */
-    abstract fun rawVideoAccountDao(): VideoAccountDao
-
     private lateinit var credentialCipher: CredentialCipher
 
     fun quarkAccountDao(): QuarkAccountDao = SecureAccountDaos.quark(rawQuarkAccountDao(), credentialCipher)
@@ -74,9 +72,6 @@ abstract class AppDatabase : RoomDatabase() {
     fun guangyaAccountDao(): GuangYaAccountDao = SecureAccountDaos.guangya(rawGuangYaAccountDao(), credentialCipher)
     fun ilanzouAccountDao(): ILanzouAccountDao = SecureAccountDaos.ilanzou(rawILanzouAccountDao(), credentialCipher)
     fun lanzouAccountDao(): LanzouAccountDao = SecureAccountDaos.lanzou(rawLanzouAccountDao(), credentialCipher)
-
-    /** 视频解析账号：与网盘凭证同一套读写口径（明文落库 + 旧密文兼容读取） */
-    fun videoAccountDao(): VideoAccountDao = SecureAccountDaos.videoAccount(rawVideoAccountDao(), credentialCipher)
 
     companion object {
         @Volatile

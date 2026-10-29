@@ -80,7 +80,6 @@ import android.net.Uri
 import androidx.annotation.DrawableRes
 import com.yunx.app.R
 import com.yunx.app.data.network.SharePlatform
-import com.yunx.app.data.network.video.VideoPlatform
 import com.yunx.app.ui.items.logoRes
 import com.yunx.app.util.AppLinks
 
@@ -135,9 +134,8 @@ fun AboutScreen(
             InfoCard(
                 icon = Icons.Outlined.Cloud,
                 title = "应用简介",
-                description = "FPAN是一款网盘 / 视频分享链接解析与高速下载工具。" +
-                    "粘贴链接即可：网盘分享能浏览内容并高速下载，视频链接能解析出直链与原图，" +
-                    "图片 / 视频 / 音频都支持在线预览播放。"
+                description = "FPAN是一款网盘分享链接解析与高速下载工具。" +
+                    "粘贴链接即可浏览分享内容并高速下载，图片 / 视频 / 音频都支持在线预览播放。"
             )
             
 
@@ -228,7 +226,7 @@ private fun AppHeader(versionName: String, versionCode: Int) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "网盘 / 视频链接解析与高速下载",
+            text = "网盘分享解析与高速下载",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline
         )
@@ -263,7 +261,7 @@ private fun InfoCard(icon: ImageVector, title: String, description: String) {
 /** 平台胶囊数据：官方 logo + 名字 */
 private data class PlatformChip(@DrawableRes val logoRes: Int, val name: String)
 
-/** 支持平台卡片：网盘与视频平台各一组，图标用各家官方 logo（见 `PlatformLogos`） */
+/** 支持平台卡片：展示当前提供下载服务的网盘平台。 */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PlatformCard() {
@@ -271,7 +269,6 @@ private fun PlatformCard() {
     val drives = SharePlatform.entries
         .filter { it !in setOf(SharePlatform.GITHUB, SharePlatform.C139, SharePlatform.GUANGYA) }
         .map { PlatformChip(it.logoRes(), it.displayName) }
-    val videos = VideoPlatform.entries.map { PlatformChip(it.logoRes(), it.displayName) }
 
     SectionCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -285,8 +282,6 @@ private fun PlatformCard() {
         }
         Spacer(modifier = Modifier.height(12.dp))
         PlatformChipGroup(label = "网盘", chips = drives)
-        Spacer(modifier = Modifier.height(12.dp))
-        PlatformChipGroup(label = "视频解析", chips = videos)
     }
 }
 
@@ -337,9 +332,7 @@ private fun PlatformChipGroup(label: String, chips: List<PlatformChip>) {
 private fun FeatureCard() {
     val features = listOf(
         "网盘分享解析" to "夸克 / UC / 迅雷 / 百度 / 123 / 115 / 蓝奏云 / 蓝奏云优享版 直链识别",
-        "视频链接解析" to "抖音 / 小红书 / 快手 / 微博 / AcFun 免登录；哔哩哔哩登录后画质更高，Pixiv 未登录只能解析部分公开作品、粘贴浏览器 Cookie 后可解析全部作品",
         "在线预览与播放" to "图片 / 视频 / 音频在线看（自动带请求头），网盘里的文本文件也能打开",
-        "音视频合轨" to "哔哩哔哩高清是音视频分轨的，应用内部合轨，不需要额外装 ffmpeg",
         "高速分片下载" to "多线程并发 + 断点续传，充分利用带宽",
         "取链即删" to "转存后立即清理，不留残留",
         "凭证本地化" to "Cookie 加密落库，仅存本机"

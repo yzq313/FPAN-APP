@@ -308,7 +308,7 @@ private fun WelcomePage(context: Context) {
         )
         Spacer(modifier = Modifier.height(14.dp))
         Text(
-            text = "网盘与视频链接解析 · 在线预览 · 高速下载",
+            text = "网盘分享解析 · 在线预览 · 高速下载",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center

@@ -155,13 +155,6 @@ class SettingsRepository(context: Context) {
             prefs.edit().putBoolean("clipboard_suggest_enabled", value).apply()
         }
 
-    /** 接受预发布版更新：检查更新时把 GitHub Pre-release 也算作新版本（默认关闭） */
-    var acceptPrereleaseUpdate: Boolean
-        get() = prefs.getBoolean("accept_prerelease_update", false)
-        set(value) {
-            prefs.edit().putBoolean("accept_prerelease_update", value).apply()
-        }
-
     /**
      * 诊断模式（设置 → 关于云析 → 长按 → 开发调试）：默认关，开启后把 db / crypto / download /
      * webview / network / operation 六个模块的详细日志写进私有目录（见 `DiagnosticLog`）。
@@ -227,16 +220,6 @@ class SettingsRepository(context: Context) {
         get() = prefs.getLong("theme_seed_color", DEFAULT_SEED_COLOR)
         set(value) {
             prefs.edit().putLong("theme_seed_color", value).apply()
-        }
-
-    /**
-     * 自定义 GitHub 下载镜像前缀（如 "https://gh.dpik.top/"）。
-     * null/空字符串表示使用内置默认镜像（UpdateChecker.MIRROR_PREFIX）。
-     */
-    var githubMirrorPrefix: String?
-        get() = prefs.getString("github_mirror_prefix", null)
-        set(value) {
-            prefs.edit().putString("github_mirror_prefix", value).apply()
         }
 
     /** 是否启用 HTTP 代理（默认关闭，直连） */

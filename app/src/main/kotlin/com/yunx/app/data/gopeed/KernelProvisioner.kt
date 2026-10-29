@@ -393,14 +393,9 @@ object KernelProvisioner {
         _phase.value = Phase.Idle
     }
 
-    /** 镜像站前缀：与「检查更新」共用同一个设置（未配置则用内置默认） */
+    /** 使用内置 GitHub 镜像站下载内核 */
     private fun mirrorUrl(context: Context, url: String): String {
-        val prefix = SettingsRepository(context).githubMirrorPrefix
-        return if (prefix.isNullOrBlank()) {
-            UpdateChecker.mirrorUrl(url)
-        } else {
-            UpdateChecker.mirrorUrl(url, prefix)
-        }
+        return UpdateChecker.mirrorUrl(url)
     }
 
     // ---------- 网盘通道 ----------

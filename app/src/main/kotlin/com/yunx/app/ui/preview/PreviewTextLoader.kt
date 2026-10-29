@@ -19,7 +19,7 @@
 package com.yunx.app.ui.preview
 
 import com.yunx.app.data.network.HttpClients
-import com.yunx.app.data.network.video.VideoHttp
+import com.yunx.app.data.network.NetworkUserAgents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -73,7 +73,7 @@ object PreviewTextLoader {
                 .url(url)
                 .apply {
                     // 先铺项目统一桌面 UA，再用调用方请求头覆盖（平台直链的 UA/Cookie/Referer 缺一个就 403）
-                    header("User-Agent", VideoHttp.UA_CHROME)
+                    header("User-Agent", NetworkUserAgents.CHROME)
                     headers.forEach { (name, value) -> header(name, value) }
                     // ★ Range 必须最后设置：请求头里若混进 Range，绝不能被它顶掉，否则可能整文件下载
                     header("Range", RANGE_HEADER_VALUE)

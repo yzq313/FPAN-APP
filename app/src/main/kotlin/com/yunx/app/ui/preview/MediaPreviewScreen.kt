@@ -89,7 +89,7 @@ import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import com.mikepenz.markdown.m3.Markdown
-import com.yunx.app.data.network.video.VideoHttp
+import com.yunx.app.data.network.NetworkUserAgents
 import com.yunx.app.ui.SnackbarController
 import com.yunx.app.ui.components.GitHubMarkdownImageTransformer
 import com.yunx.app.ui.components.YunXWavyLoading
@@ -362,7 +362,7 @@ internal fun previewNetworkHeaders(headers: Map<String, String>): NetworkHeaders
             if (name.equals("User-Agent", ignoreCase = true)) hasUserAgent = true
         }
     }
-    if (!hasUserAgent) builder.set("User-Agent", VideoHttp.UA_CHROME)
+    if (!hasUserAgent) builder.set("User-Agent", NetworkUserAgents.CHROME)
     return builder.build()
 }
 
@@ -481,7 +481,7 @@ private fun httpDataSourceFactory(headers: Map<String, String>): DefaultHttpData
     }
     return DefaultHttpDataSource.Factory()
         .setDefaultRequestProperties(requestProperties)
-        .setUserAgent(userAgent?.takeIf { it.isNotBlank() } ?: VideoHttp.UA_CHROME)
+        .setUserAgent(userAgent?.takeIf { it.isNotBlank() } ?: NetworkUserAgents.CHROME)
 }
 
 // ---------------------------------------------------------------------------

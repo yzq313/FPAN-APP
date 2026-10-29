@@ -114,7 +114,6 @@ import com.yunx.app.data.network.QuarkApi
 import com.yunx.app.data.network.TokenCheck
 import com.yunx.app.data.network.UCApi
 import com.yunx.app.data.network.XunleiApi
-import com.yunx.app.data.network.video.VideoPlatform
 import com.yunx.app.data.prefs.SettingsRepository
 import com.yunx.app.data.update.UpdateChecker
 import com.yunx.app.data.repository.AccountDirectory
@@ -138,8 +137,6 @@ import com.yunx.app.data.repository.UCAccountRepository
 import com.yunx.app.data.repository.UCResolveRepository
 import com.yunx.app.data.repository.XunleiAccountRepository
 import com.yunx.app.data.repository.XunleiResolveRepository
-import com.yunx.app.data.repository.VideoAccountRepository
-import com.yunx.app.data.repository.VideoParseRepository
 import com.yunx.app.ui.login.BaiduLoginScreen
 import com.yunx.app.ui.login.C139LoginScreen
 import com.yunx.app.ui.login.GuangYaLoginScreen
@@ -152,7 +149,6 @@ import com.yunx.app.ui.login.UCLoginScreen
 import com.yunx.app.ui.login.XunleiLoginScreen
 import com.yunx.app.ui.login.XunleiVerifyWebViewScreen
 import com.yunx.app.ui.login.XunleiWebLoginScreen
-import com.yunx.app.ui.login.VideoLoginScreen
 import com.yunx.app.ui.navigation.MainTab
 import com.yunx.app.ui.preview.MediaPreviewScreen
 import com.yunx.app.ui.preview.PreviewLauncher
@@ -198,7 +194,6 @@ import com.yunx.app.ui.viewmodel.UCCoudViewModel
 import com.yunx.app.ui.viewmodel.UCAccountViewModel
 import com.yunx.app.ui.viewmodel.XunleiAccountViewModel
 import com.yunx.app.ui.viewmodel.XunleiCloudViewModel
-import com.yunx.app.ui.viewmodel.VideoAccountViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
@@ -282,10 +277,6 @@ fun MainScreen(
     var showGuangYaLogin by rememberSaveable { mutableStateOf(false) }
     var showILanzouLogin by rememberSaveable { mutableStateOf(false) }
     var showLanzouLogin by rememberSaveable { mutableStateOf(false) }
-    // 视频平台登录页：null = 不展示；否则为正在登录的平台（枚举是 Serializable，可直接交给 rememberSaveable）
-    var videoLoginPlatform by rememberSaveable { mutableStateOf<VideoPlatform?>(null) }
-    // 本次视频登录是否算「新增账号」（账号弹窗点「添加账号」时为 true，登录后落成新的一行）
-    var videoLoginAsNewAccount by rememberSaveable { mutableStateOf(false) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
     var showSupport by rememberSaveable { mutableStateOf(false) }
     var showTheme by rememberSaveable { mutableStateOf(false) }
@@ -315,7 +306,7 @@ fun MainScreen(
     // 最近一次成功拿到的真实 Release：既用于「发现新版本」弹窗，也供设置页的开发调试入口直接预览
     var latestRelease by remember { mutableStateOf<UpdateChecker.Release?>(null) }
     LaunchedEffect(Unit) {
-        when (val result = UpdateChecker.fetchLatestRelease(ThemeController.acceptPrereleaseUpdate)) {
+        when (val result = UpdateChecker.fetchLatestRelease(false)) {
             is UpdateChecker.CheckResult.Failure -> Unit // 启动检查不打扰用户，失败原因已由 UpdateChecker 打 E 级日志
             is UpdateChecker.CheckResult.Success -> {
                 val release = result.release
@@ -339,7 +330,7 @@ fun MainScreen(
     val checkForUpdate: () -> Unit = {
         scope.launch {
             SnackbarController.show("正在检查更新…")
-            when (val result = UpdateChecker.fetchLatestRelease(ThemeController.acceptPrereleaseUpdate)) {
+            when (val result = UpdateChecker.fetchLatestRelease(false)) {
                 is UpdateChecker.CheckResult.Failure -> SnackbarController.show("检查更新失败：${result.reason}")
                 is UpdateChecker.CheckResult.Success -> {
                     val release = result.release
@@ -426,7 +417,7 @@ fun MainScreen(
     val lanzouRepository = remember {
         LanzouAccountRepository(db.lanzouAccountDao(), lanzouApi)
     }
-    // 认证备份：打包/恢复各平台凭证（网盘 + 视频解析平台）
+    // 认证备份：打包/恢复各网盘凭证
     val backupManager = remember {
         AuthBackupManager(
             db.quarkAccountDao(),
@@ -439,28 +430,21 @@ fun MainScreen(
             db.guangyaAccountDao(),
             db.ilanzouAccountDao(),
             db.lanzouAccountDao(),
-            db.videoAccountDao()
         )
     }
     // GitHub API 封装：Token 从 GitHubTokenStore 动态读取（Keystore 加密），提升 API 限额
     val githubApi = remember {
         GitHubApi(tokenProvider = { GitHubTokenStore.getToken(context) })
     }
-    // 网盘页 GitHub 卡片登录态：保存/清除 Token 后即时刷新卡片主按钮文案
-    var githubHasTokenState by remember { mutableStateOf(GitHubTokenStore.hasToken(context)) }
-    // 无效 Token 会被 GitHub 全量拒绝（401，连公开仓库解析也失败）：自动清除 Token、清空缓存并提示
+    // 无效 Token 会被 GitHub 全量拒绝（401，连公开仓库解析也失败）：自动清除 Token 并提示
     LaunchedEffect(githubApi) {
         githubApi.onUnauthorized = {
             scope.launch {
                 GitHubTokenStore.setToken(context, null)
-                githubHasTokenState = false
                 SnackbarController.show("GitHub Token 无效或已过期，已自动清除并回退匿名限额，请重新配置")
             }
         }
     }
-    // GitHub Token 配置弹窗 / 清除二次确认
-    var showGitHubTokenDialog by remember { mutableStateOf(false) }
-    var showGitHubClearConfirm by remember { mutableStateOf(false) }
     // 下载管理器：OkHttp 分片下载器 + Room 任务持久化 + 可配置线程数（设置页动态生效）
     // 下载客户端由全局 HttpClients 统一管理（大 Dispatcher 保障分片并发，不锁死 CDN host；
     // 并支持隐藏菜单「忽略 SSL 证书」开关，抓包调试时即时生效，无需重启）
@@ -539,13 +523,6 @@ fun MainScreen(
     val multiAccountViewModel: MultiAccountViewModel = viewModel(
         factory = MultiAccountViewModel.Factory(AccountDirectory(db))
     )
-    // 视频解析账号：账号页「视频解析」区的登录态与账号管理（所有视频平台共用一张表、一个 Cookie）
-    val videoAccountViewModel: VideoAccountViewModel = viewModel(
-        factory = VideoAccountViewModel.Factory(context)
-    )
-    // 视频区需要的两份数据：各平台当前账号（决定「未登录 / 昵称 / 备注」）与全部账号（多账号计数、弹窗列表）
-    val videoLoginState by videoAccountViewModel.loginState.collectAsState()
-    val videoAccounts by videoAccountViewModel.accounts.collectAsState()
     // 各平台「账号是否已登录」流：云盘浏览 VM 在启动期（未登录）init 加载会残留「请先登录…」错误态，
     // 首次登录成功后由 VM 监听该流自动重载根目录（见各 XxxCloudViewModel init）
     val quarkLoginState = remember { repository.observeAccount().map { it != null } }
@@ -730,10 +707,6 @@ fun MainScreen(
     val ilanzouResolveRepository = remember {
         ILanzouResolveRepository(ilanzouApi, ilanzouRepository)
     }
-    // 视频解析仓库：解析页「视频解析」入口使用（与视频账号页共用同一份 Cookie 账号表）
-    val videoParseRepository = remember {
-        VideoParseRepository(VideoAccountRepository(db.videoAccountDao()))
-    }
     val resolveViewModel: ResolveViewModel = viewModel(
         factory = ResolveViewModel.Factory(
             repository,
@@ -765,8 +738,6 @@ fun MainScreen(
             multiAccountDownloadProvider = { settings.multiAccountDownload },
             // 用 multiSourceActive()：C2 依赖 C1，关掉 C1 后这里也自动为 false（见 SettingsRepository）
             multiSourceDownloadProvider = { settings.multiSourceActive() },
-            // 视频解析仓库（抖音/小红书/快手/微博/AcFun/B站/Pixiv）
-            videoParseRepository = videoParseRepository
         )
     )
     val downloadViewModel: DownloadViewModel = viewModel(
@@ -991,26 +962,6 @@ fun MainScreen(
                 lanzouViewModel.cancelAddAccount()
             },
             onSaved = { showLanzouLogin = false }
-        )
-        return
-    }
-
-    // 视频平台登录页：全屏覆盖（通用 WebView Cookie 登录页，按 platform 参数化）
-    val videoLoginTarget = videoLoginPlatform
-    if (videoLoginTarget != null) {
-        VideoLoginScreen(
-            platform = videoLoginTarget,
-            viewModel = videoAccountViewModel,
-            newAccount = videoLoginAsNewAccount,
-            onBack = {
-                videoLoginPlatform = null
-                videoLoginAsNewAccount = false
-            },
-            // 保存成功后登录态 Flow 会自动刷新账号页，这里只需关掉登录页
-            onSaved = {
-                videoLoginPlatform = null
-                videoLoginAsNewAccount = false
-            }
         )
         return
     }
@@ -1318,48 +1269,6 @@ fun MainScreen(
                                     onGuangYaLogin = { showGuangYaLogin = true },
                                     onILanzouLogin = { showILanzouLogin = true },
                                     onLanzouLogin = { showLanzouLogin = true },
-                                    githubHasToken = githubHasTokenState,
-                                    onGitHubTokenClick = { showGitHubTokenDialog = true },
-                                    // 已配置 Token 点卡片主体：用 GET /user 取 login，经统一解析入口进入该账号仓库列表
-                                    onGitHubBrowseHome = {
-                                        scope.launch {
-                                            val login = githubApi.getUserLogin()
-                                            if (!login.isNullOrBlank()) {
-                                                resolveViewModel.startResolve("https://github.com/$login", "")
-                                                currentTab = MainTab.Resolve
-                                            } else {
-                                                // 取不到 login：Token 无效/已过期，或网络异常
-                                                SnackbarController.show("无法获取 GitHub 账号信息，请检查网络或重新配置 Token")
-                                            }
-                                        }
-                                    },
-                                    // 更多菜单「清除 Token」：先二次确认再清除
-                                    onGitHubClearToken = { showGitHubClearConfirm = true },
-                                    // 视频解析区：登录态 + 账号管理（弹窗里的操作全部落到 VideoAccountViewModel）
-                                    videoLoginState = videoLoginState,
-                                    videoAccounts = videoAccounts,
-                                    onVideoLogin = { platform ->
-                                        // 普通登录：覆盖当前账号那一行，不新增记录
-                                        videoLoginAsNewAccount = false
-                                        videoLoginPlatform = platform
-                                    },
-                                    onVideoAddAccount = { platform ->
-                                        // 先清一次 WebView 登录态：否则登录页会自动检测出旧账号，
-                                        // 「添加账号」加进来的还是同一个账号（与网盘的 prepareAddAccount 同因）
-                                        multiAccountViewModel.prepareAddAccount()
-                                        videoLoginAsNewAccount = true
-                                        videoLoginPlatform = platform
-                                    },
-                                    onVideoSetPrimary = { platform, id ->
-                                        videoAccountViewModel.setPrimary(platform, id)
-                                    },
-                                    onVideoRename = { id, remark ->
-                                        videoAccountViewModel.updateRemark(id, remark)
-                                    },
-                                    onVideoRemove = { id -> videoAccountViewModel.remove(id) },
-                                    onVideoRemoveAll = { platform ->
-                                        videoAccountViewModel.removeAll(platform)
-                                    }
                                 )
                                 MainTab.Download -> DownloadScreen(
                                     scrollBehavior,
@@ -1550,16 +1459,10 @@ fun MainScreen(
                 onDownloadMirror = {
                     showUpdateSheet = false
                     // 镜像站下载：GitHub 直连慢/失败时走国内加速镜像。
-                    // 使用设置页配置的自定义镜像前缀（未配置则用默认），并传直连 URL 作为
-                    // fallbackUrl——镜像站失效/失败时自动回退直连，与 GitHub 浏览下载行为一致。
+                    // 使用内置镜像，并传直连 URL 作为 fallbackUrl。
                     val apk = release.assets.firstOrNull { it.name.endsWith(".apk", true) }
                     if (apk != null) {
-                        val prefix = settings.githubMirrorPrefix
-                        val mirrorApkUrl = if (prefix.isNullOrBlank()) {
-                            UpdateChecker.mirrorUrl(apk.downloadUrl)
-                        } else {
-                            UpdateChecker.mirrorUrl(apk.downloadUrl, prefix)
-                        }
+                        val mirrorApkUrl = UpdateChecker.mirrorUrl(apk.downloadUrl)
                         scope.launch {
                             downloadManager.enqueue(
                                 url = mirrorApkUrl,
@@ -1604,123 +1507,7 @@ fun MainScreen(
         )
     }
 
-    // GitHub Token 配置弹窗（网盘页入口）：Keystore 加密存储，输入用密码可见性切换
-    // 注意：这两个弹窗与更新检查无关，必须在 latestRelease 为 null 时也能弹出
-    if (showGitHubTokenDialog) {
-        var tokenInput by rememberSaveable { mutableStateOf(GitHubTokenStore.getToken(context) ?: "") }
-        var passwordVisible by remember { mutableStateOf(false) }
-        // 校验失败提示（显示在输入框下方），修改输入即清除
-        var tokenError by remember { mutableStateOf<String?>(null) }
-        AlertDialog(
-            onDismissRequest = { showGitHubTokenDialog = false },
-            title = { Text("GitHub Token") },
-            text = {
-                Column {
-                    Text(
-                        text = "Token 仅用于提升 API 限额（匿名 60/小时，认证后 5000/小时）。经 Android Keystore AES-GCM 加密存储。",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = "如何获取 Token：",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "1. 电脑浏览器打开 GitHub，右上角头像 → Settings\n" +
-                            "2. 左侧 Developer settings → Personal access tokens → Tokens (classic) → Generate new token\n" +
-                            "3. 勾选 public_repo 即可浏览公开仓库；如需在主页看到自己的私有仓库，再勾选 repo\n" +
-                            "4. 有效期建议选 90 天或 No expiration，生成后复制粘贴到上方输入框",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "安全提示：仅给最小权限，勿勾选删除/管理类权限；Token 不明文保存、不上传，清除只需清空后保存。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = tokenInput,
-                        onValueChange = {
-                            tokenInput = it
-                            tokenError = null
-                        },
-                        singleLine = true,
-                        isError = tokenError != null,
-                        label = { Text("Personal Access Token") },
-                        supportingText = { tokenError?.let { Text(it) } },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None
-                        else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    if (passwordVisible) Icons.Outlined.Visibility
-                                    else Icons.Outlined.VisibilityOff,
-                                    contentDescription = if (passwordVisible) "隐藏" else "显示"
-                                )
-                            }
-                        }
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val input = tokenInput.trim()
-                    if (input.isBlank()) {
-                        // 清空即清除 Token（无需联网校验）
-                        GitHubTokenStore.setToken(context, null)
-                        githubHasTokenState = false
-                        showGitHubTokenDialog = false
-                        SnackbarController.show("已清除 GitHub Token")
-                    } else {
-                        // 保存前先校验：无效 Token 会让 GitHub 拒绝之后的所有请求（含公开仓库解析）
-                        scope.launch {
-                            when (val check = githubApi.validateToken(input)) {
-                                is TokenCheck.Valid -> {
-                                    // 保存失败（本机加密密钥暂时不可用）时留在弹窗里如实提示：
-                                    // 写不进去却报「已保存」，用户会以为配好了、实际仍在走匿名限额
-                                    if (GitHubTokenStore.setToken(context, input)) {
-                                        githubHasTokenState = true
-                                        showGitHubTokenDialog = false
-                                        SnackbarController.show("GitHub Token 已保存（@${check.login}）")
-                                    } else {
-                                        tokenError = "保存失败：本机加密密钥暂时不可用，请稍后重试"
-                                    }
-                                }
-                                TokenCheck.Invalid -> tokenError = "Token 无效或已过期，请重新生成后再保存"
-                                TokenCheck.Unknown -> tokenError = "无法校验 Token（网络异常），请联网后重试"
-                            }
-                        }
-                    }
-                }) { Text("保存") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGitHubTokenDialog = false }) { Text("取消") }
-            }
-        )
-    }
 
-    // 清除 GitHub Token 二次确认（网盘页更多菜单）
-    if (showGitHubClearConfirm) {
-        AlertDialog(
-            onDismissRequest = { showGitHubClearConfirm = false },
-            title = { Text("清除 GitHub Token？") },
-            text = { Text("清除后 GitHub API 回退匿名限额（60 次/小时/IP）。") },
-            confirmButton = {
-                TextButton(onClick = {
-                    GitHubTokenStore.setToken(context, null)
-                    githubHasTokenState = false
-                    showGitHubClearConfirm = false
-                    SnackbarController.show("已清除 GitHub Token")
-                }) { Text("清除", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGitHubClearConfirm = false }) { Text("取消") }
-            }
-        )
-    }
 }
 
 

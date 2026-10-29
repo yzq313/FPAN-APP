@@ -21,13 +21,11 @@ package com.yunx.app.ui.items
 import androidx.annotation.DrawableRes
 import com.yunx.app.R
 import com.yunx.app.data.network.SharePlatform
-import com.yunx.app.data.network.video.VideoPlatform
 
 /**
- * 平台 Logo 表：网盘与视频平台 → drawable 资源。
+ * 网盘平台 → drawable 资源。
  *
- * ★ 为什么不给 `VideoPlatform` 加个 `logoRes` 字段：logo 是**纯展示资产**，
- *   数据层（`data/network/video`、数据库实体）不该依赖 `R`；映射放 UI 层，数据模型保持干净。
+ * ★ logo 是**纯展示资产**，映射放 UI 层，数据模型保持干净。
  * ★ 各平台官方图标放在 `res/drawable/logo_*.png`（200×200 PNG）。**资源名只能是全小写 ASCII**，
  *   中文文件名根本用不了，所以原始文件名到资源名是这样对应过来的：
  *
@@ -61,17 +59,6 @@ fun SharePlatform.logoRes(): Int = when (this) {
     SharePlatform.ILANZOU -> R.drawable.logo_ilanzou
     SharePlatform.LANZOU -> R.drawable.logo_lanzou
     SharePlatform.GITHUB -> R.drawable.logo_github
-}
-
-@DrawableRes
-fun VideoPlatform.logoRes(): Int = when (this) {
-    VideoPlatform.DOUYIN -> R.drawable.logo_douyin
-    VideoPlatform.XHS -> R.drawable.logo_xhs
-    VideoPlatform.KUAISHOU -> R.drawable.logo_kuaishou
-    VideoPlatform.WEIBO -> R.drawable.logo_weibo
-    VideoPlatform.ACFUN -> R.drawable.logo_acfun
-    VideoPlatform.BILIBILI -> R.drawable.logo_bilibili
-    VideoPlatform.PIXIV -> R.drawable.logo_pixiv
 }
 
 /**
