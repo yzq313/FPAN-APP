@@ -1992,6 +1992,7 @@ class DownloadManager(
             result.getOrThrow()
             progressJob.cancelAndJoin()
             val size = output.length()
+            dao.updateProgress(id, DownloadTaskEntity.STATUS_DOWNLOADING, size, size)
             finishDownload(id, dir, listOf(output), task.fileName, size)
         } finally {
             withContext(NonCancellable) {
