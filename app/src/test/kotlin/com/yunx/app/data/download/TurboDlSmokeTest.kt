@@ -55,4 +55,37 @@ class TurboDlSmokeTest {
             server.shutdown()
         }
     }
+
+    @Test fun hlsPluginDownloadsAndCombinesSegments() = runBlocking {
+        val server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+                "/video.m3u8" -> MockResponse().setBody(
+                    "#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXTINF:1,\nfirst.ts\n" +
+                        "#EXTINF:1,\nsecond.ts\n#EXT-X-ENDLIST\n"
+                )
+                "/first.ts" -> MockResponse().setBody("first")
+                "/second.ts" -> MockResponse().setBody("second")
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+        server.start()
+        val bootstrap = TurboBootstrap.create(
+            TurboConfig(workDir = temporaryFolder.newFolder("hls-work")),
+            extraPlugins = listOf(HlsPlugin()),
+        )
+        try {
+            val output = temporaryFolder.newFile("hls-output")
+            val id = bootstrap.client.submit(DownloadRequest(
+                url = server.url("/video.m3u8").toString(),
+                destination = output,
+                stableKey = "hls-test",
+            ))
+            withTimeout(30_000) { bootstrap.client.await(id) }.getOrThrow()
+            assertArrayEquals("firstsecond".toByteArray(), output.readBytes())
+        } finally {
+            bootstrap.shutdown()
+            server.shutdown()
+        }
+    }
 }
