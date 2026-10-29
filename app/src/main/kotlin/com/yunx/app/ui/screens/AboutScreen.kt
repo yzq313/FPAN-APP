@@ -85,7 +85,7 @@ import com.yunx.app.ui.items.logoRes
 import com.yunx.app.util.AppLinks
 
 /**
- * 关于云析页：应用介绍、支持平台、功能特性、技术栈与免责声明。
+ * 关于FPAN页：应用介绍、支持平台、功能特性、技术栈与免责声明。
  * Material3 风格：卡片分区 + 主题色 + 动态色适配。
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,7 +108,7 @@ fun AboutScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("关于云析", style = MaterialTheme.typography.titleLarge) },
+                title = { Text("关于FPAN", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -135,7 +135,7 @@ fun AboutScreen(
             InfoCard(
                 icon = Icons.Outlined.Cloud,
                 title = "应用简介",
-                description = "云析（YunX）是一款网盘 / 视频分享链接解析与高速下载工具。" +
+                description = "FPAN是一款网盘 / 视频分享链接解析与高速下载工具。" +
                     "粘贴链接即可：网盘分享能浏览内容并高速下载，视频链接能解析出直链与原图，" +
                     "图片 / 视频 / 音频都支持在线预览播放。"
             )
@@ -170,7 +170,7 @@ fun AboutScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "云析 v$versionName · Made with ❤ and deepseek",
+                text = "FPAN v$versionName · Made with ❤ and deepseek",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier
@@ -207,7 +207,7 @@ private fun AppHeader(versionName: String, versionCode: Int) {
         ) {
             Image(
                 painter = painterResource(R.drawable.icon),
-                contentDescription = "云析图标",
+                contentDescription = "FPAN图标",
                 modifier = Modifier
                     .size(88.dp)
                     .clip(RoundedCornerShape(24.dp)),
@@ -216,13 +216,13 @@ private fun AppHeader(versionName: String, versionCode: Int) {
         }
         Spacer(modifier = Modifier.height(14.dp))
         Text(
-            text = "云析",
+            text = "FPAN",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "YunX · v$versionName ($versionCode)",
+            text = "FPAN · v$versionName ($versionCode)",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

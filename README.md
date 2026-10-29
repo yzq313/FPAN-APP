@@ -1,31 +1,33 @@
 <div align="center">
 
-<img src="app/src/main/res/drawable/icon.png" width="120" alt="云析 YunX" />
+<img src="app/src/main/res/drawable/icon.png" width="120" alt="FPAN" />
 
-# 云析 · YunX
+# FPAN
+
+本项目基于开源项目 [云析（YunX）](https://github.com/CYQawa/YunX)。
 
 **粘贴分享链接，直接高速下载 —— 一个开源的 Android 网盘 / 视频解析下载应用**
 
 识别夸克 / UC / 迅雷 / 百度 / 139 / 123 / 115 / 光鸭 / 蓝奏云 / 蓝奏云优享版 的分享链接并自动匹配提取码；也能解析抖音 / 小红书 / 快手 / 微博 / AcFun / 哔哩哔哩 / Pixiv 的视频与图集。Range 分片并发 + 断点续传，图片 / 视频 / 音频可在线预览。
 
-[![Release](https://img.shields.io/github/v/release/CYQawa/YunX?style=flat-square\&label=release\&color=4C8BF5)](https://github.com/CYQawa/YunX/releases/latest)
-[![Stars](https://img.shields.io/github/stars/CYQawa/YunX?style=flat-square\&logo=github\&color=4C8BF5)](https://github.com/CYQawa/YunX/stargazers)
+[![Release](https://img.shields.io/github/v/release/yzq313/FPAN-APP?style=flat-square\&label=release\&color=4C8BF5)](https://github.com/yzq313/FPAN-APP/releases/latest)
+[![Stars](https://img.shields.io/github/stars/yzq313/FPAN-APP?style=flat-square\&logo=github\&color=4C8BF5)](https://github.com/yzq313/FPAN-APP/stargazers)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](./LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android-3DDC84?style=flat-square\&logo=android\&logoColor=white)](#构建)
 [![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square\&logo=kotlin\&logoColor=white)](https://kotlinlang.org/)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-MD3Expressive-4285F4?style=flat-square\&logo=jetpackcompose\&logoColor=white)](https://developer.android.com/jetpack/compose)
 
-[下载最新版](https://github.com/CYQawa/YunX/releases/latest) · [功能](#功能) · [使用](#使用) · [构建](#构建) · [常见问题](#常见问题)
+[下载最新版](https://github.com/yzq313/FPAN-APP/releases/latest) · [功能](#功能) · [使用](#使用) · [构建](#构建) · [常见问题](#常见问题)
 
 
 </div>
 
 ***
 
-> **云析永远免费开源。** 如果你是在任何地方"花钱买到"的，说明你被骗了，请立即退款。
+> **FPAN 永远免费开源。** 如果你是在任何地方"花钱买到"的，说明你被骗了，请立即退款。
 > 任何收费版本均为二次打包的诈骗版本，与本项目无关。
 
-> **云析使用AGPL-3.0开源协议** 如果你使用了云析的代码，未经授权请遵守协议，同样以AGPL-3.0开放源代码
+> **FPAN 使用 AGPL-3.0 开源协议**。如果你使用了本项目的代码，请遵守协议。
 
 > 本仓库为 Android 端 App；官方 PC 端见 [YunX-Desktop](https://github.com/tidain/YunX-Desktop)
 
@@ -104,7 +106,7 @@
 > **不建议使用百度网盘，可能导致账号被风控！**
 
 > \[!NOTE]
-> 其他网盘与视频平台暂未支持，如有需要请开一个 [issue](https://github.com/CYQawa/YunX/issues)。
+> 其他网盘与视频平台暂未支持，如有需要请开一个 [issue](https://github.com/yzq313/FPAN-APP/issues)。
 
 ## 使用
 
@@ -130,7 +132,7 @@
 要求：minSdk 24，targetSdk 34。
 
 ```bash
-git clone https://github.com/CYQawa/YunX.git
+git clone https://github.com/yzq313/FPAN-APP.git
 ```
 
 用 Android Studio 打开项目直接构建即可。项目在 AndroidIDE 上开发调试，理论上也兼容其它 Android 构建环境。
@@ -159,7 +161,7 @@ git clone https://github.com/CYQawa/YunX.git
 
 ## 反倒卖
 
-> 云析完全免费开源。如果你下载到要钱的版本，那么你就是被骗了，请立马去退款。
+> FPAN 完全免费开源。如果你下载到要钱的版本，那么你就是被骗了，请立马去退款。
 
 - 倒卖狗 🐶：`qq1360735243`
 

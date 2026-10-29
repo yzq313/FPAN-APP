@@ -66,7 +66,7 @@ class CrashHandler(private val context: Context) : Thread.UncaughtExceptionHandl
         }.getOrNull() ?: "?"
 
         return buildString {
-            appendLine("云析 Crash Report")
+            appendLine("FPAN Crash Report")
             appendLine("时间：$time")
             appendLine("线程：${thread.name}")
             appendLine("设备：${Build.MANUFACTURER} ${Build.MODEL}（Android ${Build.VERSION.RELEASE}，SDK ${Build.VERSION.SDK_INT}）")

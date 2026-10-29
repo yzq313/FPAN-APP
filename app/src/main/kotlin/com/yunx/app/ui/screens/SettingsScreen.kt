@@ -206,7 +206,7 @@ fun SettingsScreen(
     scrollBehavior: TopAppBarScrollBehavior,
     /**
      * 容器变换（Container Transform）源侧修饰符：由 MainScreen 在 SharedTransitionLayout 作用域内构造
-     * （设置页自己拿不到那个作用域），分别挂到「主题与外观 / 关于云析 / 支持开发 / 下载引擎」这四行上。
+     * （设置页自己拿不到那个作用域），分别挂到「主题与外观 / 关于FPAN / 支持开发 / 下载引擎」这四行上。
      */
     themeRowModifier: Modifier = Modifier,
     aboutRowModifier: Modifier = Modifier,
@@ -746,7 +746,7 @@ fun SettingsScreen(
             icon = Icons.Outlined.Link,
             shape = listGroupShape(ListGroupPos.SINGLE),
             title = "网盘链接一键唤起",
-            description = "点分享链接（或分享到云析）直接进来解析；可按平台逐个开关",
+            description = "点分享链接（或分享到FPAN）直接进来解析；可按平台逐个开关",
             modifier = linkOpenRowModifier,
             onClick = onLinkOpenClick
         )
@@ -757,7 +757,7 @@ fun SettingsScreen(
         SettingsItem(
             icon = Icons.Outlined.Info,
             shape = listGroupShape(ListGroupPos.FIRST),
-            title = "关于云析",
+            title = "关于FPAN",
             description = "版本信息、支持平台与技术说明",
             modifier = aboutRowModifier,
             onClick = onAboutClick,
@@ -794,7 +794,7 @@ fun SettingsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         text = "Gopeed 是原生下载核心，只能按真实文件路径落盘，读不了系统文件选择器给的目录。" +
-                            "请填一个绝对路径，例如 ${StorageDirs.defaultDownloadPath()}/YunX。",
+                            "请填一个绝对路径，例如 ${StorageDirs.defaultDownloadPath()}/FPAN。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -913,7 +913,7 @@ fun SettingsScreen(
         )
     }
 
-    // 隐藏开发调试菜单（长按「关于云析」打开）
+    // 隐藏开发调试菜单（长按「关于FPAN」打开）
     if (showDevMenu) {
         AlertDialog(
             onDismissRequest = { showDevMenu = false },
@@ -1464,7 +1464,7 @@ fun SettingsScreen(
             title = { Text("保持后台下载") },
             text = {
                 Text(
-                    text = "为确保障屏后下载不中断，建议将云析加入「忽略电池优化」白名单。是否前往系统设置？",
+                    text = "为确保障屏后下载不中断，建议将FPAN加入「忽略电池优化」白名单。是否前往系统设置？",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },

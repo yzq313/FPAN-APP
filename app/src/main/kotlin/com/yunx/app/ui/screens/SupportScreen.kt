@@ -239,7 +239,7 @@ fun SupportScreen(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "云析完全免费开源，所有功能无需捐赠即可正常使用。" +
+                        text = "FPAN完全免费开源，所有功能无需捐赠即可正常使用。" +
                             "如果你觉得它帮到了你，愿意的话可以扫码表达一下心意，" +
                             "你的支持会成为持续维护与更新的动力～",
                         style = MaterialTheme.typography.bodyMedium,
@@ -284,7 +284,7 @@ fun SupportScreen(
                             saveQrToGallery(context, current.drawableRes, current.fileTag)
                         }
                         if (ok) saved = true
-                        SnackbarController.show(if (ok) "已保存到相册（Pictures/YunX）" else "保存失败")
+                        SnackbarController.show(if (ok) "已保存到相册（Pictures/FPAN）" else "保存失败")
                     }
                 },
                 modifier = Modifier
@@ -303,7 +303,7 @@ fun SupportScreen(
             // 保存成功本地反馈（避免覆盖层遮挡全局 Snackbar 时无提示）
             if (saved) {
                 Text(
-                    text = "✓ 二维码已保存到 相册/Pictures/YunX",
+                    text = "✓ 二维码已保存到 相册/Pictures/FPAN",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center
@@ -762,7 +762,7 @@ private fun saveQrToGallery(context: Context, @DrawableRes drawableRes: Int, fil
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/YunX")
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/FPAN")
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
         val uri = context.contentResolver.insert(

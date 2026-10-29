@@ -26,10 +26,12 @@ package com.yunx.app.util
  * ★ 新增对外入口（比如 Telegram 群、邮件反馈）时，先往这里加常量，再到界面里引用。
  */
 object AppLinks {
+    const val GITHUB_REPO_PATH = "yzq313/FPAN-APP"
+
     /** GitHub 仓库完整地址（点击用系统浏览器打开） */
-    const val GITHUB_REPO = "https://github.com/CYQawa/YunX"
+    const val GITHUB_REPO = "https://github.com/$GITHUB_REPO_PATH"
 
     /** GitHub 仓库展示用短地址（去掉协议头，界面文字用；与 [GITHUB_REPO] 必须指向同一仓库） */
-    const val GITHUB_REPO_DISPLAY = "github.com/CYQawa/YunX"
+    const val GITHUB_REPO_DISPLAY = "github.com/$GITHUB_REPO_PATH"
 
 }

@@ -119,10 +119,10 @@ internal fun PermissionPage(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = if (storageRequired) {
-                "云析只用下面这几项系统授权。存储权限是 Android 9 及以下保存文件的必要权限，必须授权；" +
+                "FPAN只用下面这几项系统授权。存储权限是 Android 9 及以下保存文件的必要权限，必须授权；" +
                     "其余两项可以跳过，之后也能在「设置」里随时更改"
             } else {
-                "云析只用下面这几项系统授权，都可以跳过，之后也能在「设置」里随时更改"
+                "FPAN只用下面这几项系统授权，都可以跳过，之后也能在「设置」里随时更改"
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -150,7 +150,7 @@ internal fun PermissionPage(
         PermissionCard(
             icon = Icons.Outlined.BatteryChargingFull,
             title = "后台运行",
-            desc = "把云析加入「忽略电池优化」白名单，锁屏或切到后台后下载不会被系统冻结（推荐开启）。",
+            desc = "把FPAN加入「忽略电池优化」白名单，锁屏或切到后台后下载不会被系统冻结（推荐开启）。",
             granted = batteryIgnored,
             grantedText = "已加入白名单",
             actionText = "去设置",

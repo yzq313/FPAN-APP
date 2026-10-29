@@ -103,7 +103,7 @@ object LogExporter {
         OutputStreamWriter(output, StandardCharsets.UTF_8).use { writer ->
             // ---------- 头部：应用与设备信息 ----------
             val pkg = context.packageManager.getPackageInfo(context.packageName, 0)
-            writer.write("云析（YunX）日志导出\n")
+            writer.write("FPAN日志导出\n")
             writer.write("导出时间：${now()}\n")
             writer.write("应用版本：${pkg.versionName}（${pkg.versionCode}）\n")
             writer.write("设备：${Build.MANUFACTURER} ${Build.MODEL}\n")

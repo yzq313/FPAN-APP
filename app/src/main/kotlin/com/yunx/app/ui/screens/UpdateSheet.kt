@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.dp
 import com.yunx.app.data.update.UpdateChecker
 
 /** Release 说明里没给 html_url 时的兜底跳转地址 */
-private const val RELEASES_PAGE_FALLBACK = "https://github.com/CYQawa/YunX/releases/latest"
+private const val RELEASES_PAGE_FALLBACK = "https://github.com/${UpdateChecker.APP_REPO}/releases/latest"
 
 /**
  * 发现新版本的**底部弹窗**。

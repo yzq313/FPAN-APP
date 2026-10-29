@@ -21,6 +21,7 @@ package com.yunx.app.data.update
 import android.content.Context
 import android.util.Log
 import com.yunx.app.data.network.HttpClients
+import com.yunx.app.util.AppLinks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -29,8 +30,8 @@ import org.json.JSONObject
 
 /**
  * GitHub Release 更新检测。
- * 正式版通道（默认）：GET https://api.github.com/repos/CYQawa/YunX/releases/latest
- * 预发布通道（设置页开启「接受预发布版更新」后）：GET https://api.github.com/repos/CYQawa/YunX/releases
+ * 正式版通道（默认）：GET https://api.github.com/repos/yzq313/FPAN-APP/releases/latest
+ * 预发布通道（设置页开启「接受预发布版更新」后）：GET https://api.github.com/repos/yzq313/FPAN-APP/releases
  *
  * ★ 仓库路径参数化了（[repo]）：内核包下载走的是另一个仓库（`CYQawa/yunx_gopeed_build`，
  *   见 `KernelProvisioner.KERNEL_REPO`）。Release 的抓取/解析**只此一份实现**，
@@ -39,7 +40,7 @@ import org.json.JSONObject
 object UpdateChecker {
 
     /** 本应用自己的仓库（更新检测默认走它） */
-    const val APP_REPO = "CYQawa/YunX"
+    const val APP_REPO = AppLinks.GITHUB_REPO_PATH
 
     private fun latestUrl(repo: String) = "https://api.github.com/repos/$repo/releases/latest"
 

@@ -76,7 +76,7 @@ import com.yunx.app.util.LinkOpener
  * 「链接唤起」（深链接注册项）设置页。
  *
  * 每行对应清单里一个 activity-alias：关掉就是把那个 alias 置为 DISABLED，
- * 系统随即不再把那种链接派给云析（详见 [LinkOpenTarget] / [LinkOpener]）。
+ * 系统随即不再把那种链接派给FPAN（详见 [LinkOpenTarget] / [LinkOpener]）。
  *
  * ★ 页面只是开关的「用户意愿」，真正生效的组件状态由 [LinkOpener.apply] 立刻同步 —— 不写回就不会生效，
  *   所以这里每次切换都同时做三件事：改本地状态、写 prefs、同步组件。
@@ -126,7 +126,7 @@ fun LinkOpenScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "在浏览器或其它 App 里点网盘分享链接，系统会问用哪个应用打开 —— " +
-                            "选「云析」并勾选「始终」，之后点链接就直接进来解析。",
+                            "选「FPAN」并勾选「始终」，之后点链接就直接进来解析。",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -134,14 +134,14 @@ fun LinkOpenScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     Text(
                         text = "系统设置里那个「已验证的链接」会一直是 0：验证要求每个网盘域名的服务器上" +
                             "放置本应用的校验文件（assetlinks.json），而这些域名都不属于本项目，" +
-                            "第三方 App 无法做到（开了自动验证反而可能让云析从选择器里彻底消失）。",
+                            "第三方 App 无法做到（开了自动验证反而可能让FPAN从选择器里彻底消失）。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "官方对「无法验证域名的第三方 App」给出的做法是手动关联域名：在系统的" +
-                            "「默认打开 → 打开支持的链接」里把网盘域名勾给云析，效果与验证相同" +
+                            "「默认打开 → 打开支持的链接」里把网盘域名勾给FPAN，效果与验证相同" +
                             "（不再弹选择器），只是记在「要在此应用中打开的链接」里。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -183,7 +183,7 @@ fun LinkOpenScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         Text(text = "去系统设置关联域名", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "打开「默认打开 → 打开支持的链接」，把要接管的网盘域名勾给云析",
+                            text = "打开「默认打开 → 打开支持的链接」，把要接管的网盘域名勾给FPAN",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -287,7 +287,7 @@ private fun LinkOpenRow(
 }
 
 /**
- * 打开系统的「默认打开 / 打开支持的链接」页 —— 用户在那里把网盘域名手动关联给云析。
+ * 打开系统的「默认打开 / 打开支持的链接」页 —— 用户在那里把网盘域名手动关联给FPAN。
  *
  * 这是免选择器直开的**唯一**落地方式：域名验证要求每个网盘域名自己托管 assetlinks.json，
  * 第三方 App 做不到（官方文档「在您的应用中打开您的应用无法验证的网域」一节给的就是手动关联）。

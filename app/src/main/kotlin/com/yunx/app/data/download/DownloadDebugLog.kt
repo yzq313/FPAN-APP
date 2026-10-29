@@ -36,7 +36,7 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * 下载调试日志（设置 → 关于云析 → 长按 → 开发调试 → 下载调试）。
+ * 下载调试日志（设置 → 关于FPAN → 长按 → 开发调试 → 下载调试）。
  *
  * 与 `DiagnosticLog`（按模块的全局诊断日志、落盘轮转）不同：这里是**按下载任务**记录的事件流，
  * 面向「这个任务为什么慢 / 为什么失败」的排查 —— 调试页里能实时跟随，也能整体导出成文件分享。
@@ -247,7 +247,7 @@ object DownloadDebugLog {
     fun buildExportText(context: Context, task: DownloadTaskEntity): String {
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         return buildString {
-            appendLine("云析（YunX）下载调试日志")
+            appendLine("FPAN下载调试日志")
             appendLine("导出时间：${sdf.format(Date())}")
             appendLine("应用版本：${appVersion(context)}")
             appendLine("设备：${Build.MANUFACTURER} ${Build.MODEL}")

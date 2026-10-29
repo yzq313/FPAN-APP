@@ -1,4 +1,4 @@
-YunX (云析) is an open-source share-link parser and high-speed downloader for Android: paste a share link and download it right away — cloud drives and video platforms alike.
+FPAN is an open-source share-link parser and high-speed downloader for Android: paste a share link and download it right away — cloud drives and video platforms alike.
 
 Features
 - Cloud-drive share links: Quark, UC, Xunlei, Baidu, 139, 123, 115, GuangYa, Lanzou and Lanzou Premium, with automatic passcode matching
@@ -29,4 +29,4 @@ Ads and privacy
 No ads and no analytics SDKs. Direct links, cookies and JWTs stay on your device; credential backups are encrypted with a key derived from your passphrase.
 
 Note
-Using Baidu Netdisk may trigger account risk control. YunX is free and open source forever — any paid copy is a repackaged scam and is unrelated to this project.
+Using Baidu Netdisk may trigger account risk control. FPAN is free and open source forever — any paid copy is a repackaged scam and is unrelated to this project.

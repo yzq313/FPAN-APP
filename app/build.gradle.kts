@@ -53,8 +53,8 @@ android {
         // 原因与实测证据见 Agent.md §3.11，勿降回 23。
         minSdk = 24
         targetSdk = 34
-        versionCode = 15
-        versionName = "1.0"
+        versionCode = 17
+        versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

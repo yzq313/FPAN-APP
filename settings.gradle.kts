@@ -45,6 +45,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "YunX"
+rootProject.name = "FPAN"
 
 include(":app")
